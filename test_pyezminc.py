@@ -39,7 +39,7 @@ import shlex
 import minc
 
 
-DATA_PATH = os.path.join(os.path.split(os.path.abspath( __file__ ))[0], 'test', 'data') 
+DATA_PATH = '/opt/minc/share/icbm152_model_09c'
 
 def check_call_out(command, cwd=None, autosplit=True, shell=False, verbose=False, logFile=None, stderr=sp.STDOUT, print_exception=True, *args, **kwargs):
     """ Execute a command, grab its output and check its return code.
@@ -131,10 +131,10 @@ class TestLabel(unittest.TestCase):
 
     def setUp(self):
 
-        gvf = 'trial00_site-00_subject_00_screening_gvf_ISPC-stx152lsq6.mnc.gz'
+        gvf = 'mni_icbm152_t1_tal_nlin_sym_09c_atlas/atlas_csf.mnc'
         self.fname = os.path.join(DATA_PATH, gvf)
         self.img = minc.Label(self.fname)
-        self.tmp = create_tmp_filename(prefix='trial_site_patientid_patientname_timepoint_', suffix='.mnc.gz', remove=False)
+        self.tmp = create_tmp_filename(prefix='atlas_csf', suffix='.mnc', remove=False)
 
     def tearDown(self):
         del self.img
@@ -156,7 +156,7 @@ class TestLabel(unittest.TestCase):
             self.img.save(self.tmp)
 
     def testRegionsId(self):
-        self.assertEqual(self.img.regions_id(), [1, 2])
+        self.assertEqual(self.img.regions_id(), [3, 9, 232, 233, 255])
         
     def testRegionsIndices(self):
         nb = len(self.img.regions_indices()[2][0])
@@ -170,42 +170,42 @@ class TestLabel(unittest.TestCase):
     def testNbRegions(self):
         self.assertEqual(self.img.nb_regions(), 2)
 
-    @unittest.skipIf(not os.path.isdir('/trials/quarantine'), '/trials/quarantine directory does not exist')
-    def testVolume(self):
-        volume_py = [v for v in self.img.regions_volume().itervalues()]
-        volume_c = float(check_call_out('label_volume.pl {0}'.format(self.fname)))
-        self.assertAlmostEqual(sum(volume_py), volume_c)
+    #@unittest.skipIf(not os.path.isdir('/trials/quarantine'), '/trials/quarantine directory does not exist')
+    #def testVolume(self):
+        #volume_py = [v for v in self.img.regions_volume().itervalues()]
+        #volume_c = float(check_call_out('label_volume.pl {0}'.format(self.fname)))
+        #self.assertAlmostEqual(sum(volume_py), volume_c)
 
-    @unittest.skipIf(not os.path.isdir('/trials/quarantine'), '/trials/quarantine directory does not exist')
-    def testDilation(self):
-        tmp = {}
-        tmp_orig_root = create_tmp_filename(suffix='', remove=True)
-        tmp['orig'] = tmp_orig_root + '_d.mnc'
-        tmp['cmp'] = create_tmp_filename(suffix='', remove=True)
+    #@unittest.skipIf(not os.path.isdir('/trials/quarantine'), '/trials/quarantine directory does not exist')
+    #def testDilation(self):
+        #tmp = {}
+        #tmp_orig_root = create_tmp_filename(suffix='', remove=True)
+        #tmp['orig'] = tmp_orig_root + '_d.mnc'
+        #tmp['cmp'] = create_tmp_filename(suffix='', remove=True)
 
-        # Dilate the label with python
-        l = self.img.dilation()
-        l.save(self.tmp)
+        ## Dilate the label with python
+        #l = self.img.dilation()
+        #l.save(self.tmp)
 
-        # Dilate the label with minc-ed
-        check_call_out('minc-ed {input} {outroot} d'.format(input=self.fname, outroot=tmp_orig_root), cwd='/tmp')
+        ## Dilate the label with minc-ed
+        #check_call_out('minc-ed {input} {outroot} d'.format(input=self.fname, outroot=tmp_orig_root), cwd='/tmp')
 
-        # Compare labels
-        check_call_out('mincmath -clobber -float -sub {python} {original} {output}'.format(python=self.tmp, original=tmp['orig'], output=tmp['cmp']))
-        out = check_call_out('mincstats -sum {cmp}'.format(cmp=tmp['cmp']))
-        res = float(re.sub('Sum:(.*)',r'\1', out))
-        self.assertAlmostEqual(res, 0)
+        ## Compare labels
+        #check_call_out('mincmath -clobber -float -sub {python} {original} {output}'.format(python=self.tmp, original=tmp['orig'], output=tmp['cmp']))
+        #out = check_call_out('mincstats -sum {cmp}'.format(cmp=tmp['cmp']))
+        #res = float(re.sub('Sum:(.*)',r'\1', out))
+        #self.assertAlmostEqual(res, 0)
 
-        for f in tmp.itervalues():
-            if os.path.isfile(f):
-                os.remove(f)
+        #for f in tmp.itervalues():
+            #if os.path.isfile(f):
+                #os.remove(f)
 
 class TestImage(unittest.TestCase):
     def setUp(self):
-        self.fname = os.path.join(DATA_PATH, 'trial00_site-00_subject_02_screening_t2w.mnc.gz')
+        self.fname = os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc')
         self.img = minc.Image(self.fname)
-        self.fname_nan = os.path.join(DATA_PATH, 'trials01_site-01_subject_01_Rescan_MTR.mnc.gz')
-        self.tmp = create_tmp_filename(prefix='trial_site_patientid_patientname_timepoint_', suffix='.mnc.gz', remove=False)
+        self.fname_nan = os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc')
+        self.tmp = create_tmp_filename(prefix='mni_icbm152_', suffix='.mnc', remove=False)
 
     def tearDown(self):
         if os.path.isfile(self.tmp):
@@ -218,26 +218,26 @@ class TestImage(unittest.TestCase):
         self.assertTrue(isinstance(img.data, np.ndarray))
 
     def testShape(self):
-        self.assertEqual(self.img.data.shape, (60, 256, 256))
+        self.assertEqual(self.img.data.shape, (193,229,193))
 
     def testDim(self):
-        self.assertEqual(self.img.dim(), [256, 256, 60])
+        self.assertEqual(self.img.dim(), [193,229,193])
 
     def testSpacing(self):
-        self.assertEqual(self.img.spacing(), [-0.9766, -0.9766, 3.0000087225131])
+        self.assertEqual(self.img.spacing(), [1,1,1])
 
     def testVolume(self):
-        self.assertAlmostEqual(self.img.volume(1), 2.8612509990755863)
+        self.assertAlmostEqual(self.img.volume(1), 1.0)
 
     def testHistory(self):
         img = minc.Image(self.fname)
-        history = ['Thu Sep 30 10:25:49 EDT 2010>>>> dicom_to_minc . 1.dcm ... 9.dcm']
+        history = ['Thu Jul 30 14:23:47 2009>>> mincaverage -short mni_icbm152_t1_tal_nlin_sym_09c_.mnc mni_icbm152_t1_tal_nlin_sym_09c_flip_.mnc final/mni_icbm152_t1_tal_nlin_sym_09c.mnc']
         self.assertEqual(img.history, history)
     
     def testDirectionCosines(self):
-        cosines = {'xspace': (0.99974332100751, -0.0202945065163616, 0.0100710032336977),
-                   'yspace': (0.0205388951134461, 0.99953876219266, -0.0223699946777963),
-                   'zspace': (-0.00961237010607338, 0.022571100055273, 0.999699028599727)}
+        cosines = {'xspace': (1.0, 0.0, 0.0),
+                   'yspace': (0.0, 1.0, 0.0),
+                   'zspace': (0.0, 0.0, 1.0)}
         self.assertEqual(self.img.direction_cosines, cosines)
 
     def testNumpyType(self):
@@ -245,11 +245,11 @@ class TestImage(unittest.TestCase):
         self.assertTrue(self.img.data.dtype == np.float64)
         
     def testStart(self):
-        start = [123.005338797863, 146.509887972121, -50.699845086739]
+        start = [-78, -132, -96 ]
         self.assertEqual(self.img.start(), start)
 
     def testVoxelToWorld(self):
-        coords = [115.44048801168343, 125.50823810538679, 37.588527356322899]
+        coords = [-66, -112, -68 ]
         self.assertTrue(np.allclose(coords, self.img.voxel_to_world((10,20,30))))
 
     def testSave(self):
@@ -271,19 +271,19 @@ class TestImage(unittest.TestCase):
             self.img.save(self.tmp)
 
     def testMax(self):
-        self.assertAlmostEqual(self.img.data.max(), 1451)
+        self.assertAlmostEqual(self.img.data.max(), 98.55860519)
 
     def testMin(self):
-        self.assertAlmostEqual(self.img.data.min(), 0)
+        self.assertAlmostEqual(self.img.data.min(), 0.01061781053)
 
     def testMean(self):
-        self.assertAlmostEqual(np.mean(self.img.data), 119.5636998)
+        self.assertAlmostEqual(np.mean(self.img.data), 29.61005195)
 
     def testMedian(self):
-        self.assertAlmostEqual(np.median(self.img.data), 22.994871794871795)
+        self.assertAlmostEqual(np.median(self.img.data), 12.6001232)
 
     def testVariance(self):
-        self.assertAlmostEqual(np.var(self.img.data, ddof=1), 39609.101380398417)
+        self.assertAlmostEqual(np.var(self.img.data, ddof=1), 871.0675483)
 
     def testSize(self):
         self.assertEqual(np.size(self.img.data), 3932160)
@@ -307,7 +307,7 @@ class TestImage(unittest.TestCase):
         for minctype in ('byte', 'short', 'int', 'float', 'double'):
             check_call_out(['mincreshape', '-'+minctype, '-clobber', self.fname, self.tmp])
         self.img = minc.Image(self.fname)
-        self.assertAlmostEqual(np.median(self.img.data), 22.994871794871795)
+        self.assertAlmostEqual(np.median(self.img.data), 12.6001232)
 
     def testLoadNan(self):
         with self.assertRaises(Exception):
@@ -318,10 +318,10 @@ class TestImage(unittest.TestCase):
 
 class TestMaskedImage(unittest.TestCase):
     def setUp(self):
-        self.fname = os.path.join(DATA_PATH, 'trial00_site-00_subject_02_screening_t2w.mnc.gz')
-        self.fmask = os.path.join(DATA_PATH, 'trial00_site-00_subject_02_screening_t2w_nu_ANAT-brain.mask.mnc.gz')
+        self.fname = os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc')
+        self.fmask = os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc')
         self.masked_data = ma.masked_array(minc.Image(self.fname).data, mask=minc.Mask(self.fmask).data)
-        self.tmp = create_tmp_filename(prefix='trial_site_patientid_patientname_timepoint_', suffix='.mnc.gz', remove=True)
+        self.tmp = create_tmp_filename(prefix='mni_icbm152_t2_', suffix='.mnc', remove=True)
 
     def tearDown(self):
         if os.path.isfile(self.tmp):
@@ -348,7 +348,7 @@ class TestMaskedImage(unittest.TestCase):
 
     def testSum(self):
         self.assertAlmostEqual(ma.sum(self.masked_data), 269225069.77336735)
-        
+
 
 
 
