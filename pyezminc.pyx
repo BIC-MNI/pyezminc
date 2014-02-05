@@ -99,7 +99,7 @@ cdef class EZMincWrapper(object):
             self.wrtptr.setup_write_double()
         else:
             raise Exception('dtype not recognized', dtype)
-    
+
     def __load_standard_volume(self, dtype=None):
         if dtype == np.float32:
             load_standard_volume(self.rdrptr[0], <float*>self.data.data)
@@ -109,7 +109,7 @@ cdef class EZMincWrapper(object):
             load_standard_volume(self.rdrptr[0], <double*>self.data.data)
         else:
             raise Exception('dtype not recognized', dtype)
-            
+
     def __make_contiguous(self):
         cdef np.ndarray contdata
         if not self.data.flags['C_CONTIGUOUS']:
@@ -129,7 +129,7 @@ cdef class EZMincWrapper(object):
             save_standard_volume(self.wrtptr[0], <double*>contdata.data)
         else:
             raise Exception('dtype not recognized', dtype)
-    
+
     def __init_ndarray(self, dtype=None):
         """ Initialize the minc image as a numpy array with dimensions T Z Y X V in that order"""
         cdef int total_size = self.total_size()
@@ -253,3 +253,4 @@ cdef class EZMincWrapper(object):
         del self.wrtptr
         del self.data
 
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

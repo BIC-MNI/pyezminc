@@ -117,3 +117,5 @@ cdef extern from "minc_1_simple.h" namespace "minc":
   cdef void save_standard_volume(minc_1_writer& rw, double *vol) except +
   cdef void save_standard_volume(minc_1_writer& rw, float *vol) except +
   cdef void save_standard_volume(minc_1_writer& rw, int *vol) except +
+
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
