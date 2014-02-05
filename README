@@ -1,0 +1,43 @@
+Copyright 2013, Haz-Edine Assemlal
+
+This file is part of PYEZMINC.
+
+PYEZMINC is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 2.
+
+PYEZMINC is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with PYEZMINC.  If not, see <http://www.gnu.org/licenses/>.
+
+The dataset in the directory 'test/data' is the property of NeuroRx Research and cannot be distributed.
+
+Description: PYEZMINC is a python module to read and write MINC files.
+
+FEATURES:
+- read/write MINC1 and MINC2 images from/to numpy array
+- read metadata header
+- 3 simple classes: 
+  - Image (numpy.float64)
+  - Label (numpy.int32)
+  - Mask (numpy.int32)
+
+
+BUILD REQUIREMENTS:
+- python2-devel
+- minc-toolkit >= 0.3.16
+- Cython >= 0.17
+- zlib-devel
+- numpy
+- scipy
+
+HOW TO INSTALL:
+python setup.py install
+
+TODO:
+- Write MINC header
+- Read header only
