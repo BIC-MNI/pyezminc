@@ -30,13 +30,12 @@ ext_modules=[Extension(
                    libraries=['volume_io2', 'minc2','z','m', 'minc_io'],
                    #extra_objects = ['/hydra/home/hassemlal/local/lib/libminc_io.a'],
                    include_dirs = [os.path.join(HOME, 'local','include'),
-                                   '/opt/minc-toolkit/0.3.16/include',
+                                   '/opt/minc/include',
                                    numpy.get_include()],
                    library_dirs = [os.path.join(HOME, 'local', 'lib'),
-                                   '/opt/minc-toolkit/0.3.16/lib64'],
-                   runtime_library_dirs = ['/opt/minc-toolkit/0.3.16/lib64'],
+                                   '/opt/minc/lib'],
+                   runtime_library_dirs = ['/opt/minc/lib'],
                    language="c++")]  # causes Cython to create C++ source
-
 
 setup(
       name = 'pyezminc',
