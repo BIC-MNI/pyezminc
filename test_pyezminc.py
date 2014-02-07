@@ -127,6 +127,20 @@ def create_tmp_filename (suffix='.mnc.gz', prefix='tmp_', remove=True):
         os.remove(tmp_filename)
     return tmp_filename
 
+class TestIterator(unittest.TestCase):
+    def setUp(self):
+
+        self.fname = os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc')
+        self.img = minc.Image(self.fname)
+        
+    def tearDown(self):
+        del self.img
+  
+    def testLoad(self):
+        img = minc.Image()
+        img.load(self.fname)
+        self.assertTrue(isinstance(img.data, np.ndarray))
+
 class TestLabel(unittest.TestCase):
 
     def setUp(self):
@@ -377,6 +391,7 @@ def main(argv=None):
     print 'Using DATA from {0}'.format(DATA_PATH)
     
     suite = unittest.TestSuite()
+    suite.addTests(unittest.makeSuite(TestIterator))
     suite.addTests(unittest.makeSuite(TestLabel))
     suite.addTests(unittest.makeSuite(TestImage))
     suite.addTests(unittest.makeSuite(TestMaskedImage))

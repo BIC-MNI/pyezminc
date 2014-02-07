@@ -52,7 +52,7 @@ nctype_to_numpy = {NC_BYTE : {True:np.int8, False:np.uint8},
 
 cdef class EZMincWrapper(object):
     '''
-    classdocs
+    Wrapper around EZminc reader/writer
     '''
     cdef minc_1_reader *rdrptr
     cdef minc_1_writer *wrtptr
@@ -252,5 +252,28 @@ cdef class EZMincWrapper(object):
         del self.rdrptr
         del self.wrtptr
         del self.data
+        
+cdef class input_iterator_real(object):
+    cdef minc_input_iterator[double] * _it
 
+    def __cinit__(self,rdr=None):
+        if rdr is None:
+            self._it=new minc_input_iterator[double]()
+        else:
+            self._it=new minc_input_iterator[double](<minc_1_reader&>(rdr.rdrptr))
+
+    def __next__(self):
+        return self._it.next()
+
+    def begin(self):
+        self._it.begin()
+
+    def last(self):
+        self._it.last()
+
+    def value(self):
+        return self._it.value()
+
+    def __dealloc__ (self):
+        del self._it
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
