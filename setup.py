@@ -25,25 +25,28 @@ import os
 HOME = os.path.expanduser('~')
 MINCDIR = '/opt/minc'
 
+
 ext_modules=[Extension(
-                   "pyezminc",                                              # name of extension
-                   ["pyezminc.pyx", 'pyezminc.pxd'],                        # our Cython source
-                   libraries=['volume_io2', 'minc2','z','m', 'minc_io'],
-                   include_dirs = [os.path.join(MINCDIR,'include'),
-                                   numpy.get_include()],
-                   library_dirs = [os.path.join(MINCDIR,'lib')],
-                   runtime_library_dirs = [os.path.join(MINCDIR,'lib')],    # RPATH settings
-                   #extra_objects = [os.path.join(MINCDIR,'libminc_io.a')], # Use this if using static link
-                   language="c++")]  # causes Cython to create C++ source
+                    "pyezminc",                                              # name of extension
+                    ["pyezminc.pyx", 'pyezminc.pxd'],                        # our Cython source
+                    libraries=['minc2','z','m', 'minc_io'],                  # TODO: determine if volume_io is still availabel as separate library
+                    include_dirs = [os.path.join(MINCDIR,'include'),
+                                    numpy.get_include()],
+                    library_dirs = [os.path.join(MINCDIR,'lib')],
+                    runtime_library_dirs = [os.path.join(MINCDIR,'lib')],    # RPATH settings
+                    #extra_objects = [os.path.join(MINCDIR,'libminc_io.a')], # Use this if using static link
+                    language="c++")]  # causes Cython to create C++ source
 
 setup(
-      name = 'pyezminc',
-      version = '1.0',
-      url = 'https://github.com/BIC-MNI/pyezminc',
-      author = 'Haz-Edine Assemlal',
-      author_email = 'haz-edine@assemlal.com',
-      cmdclass={'build_ext': build_ext},
-      py_modules = ['minc'],
-      ext_modules = ext_modules,
-      license = 'GNU GPL v2'
+    name = 'pyezminc',
+    version = '1.0',
+    url = 'https://github.com/BIC-MNI/pyezminc',
+    author = 'Haz-Edine Assemlal',
+    author_email = 'haz-edine@assemlal.com',
+    cmdclass={'build_ext': build_ext},
+    py_modules = ['minc'],
+    ext_modules = ext_modules,
+    license = 'GNU GPL v2'
 )
+
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
