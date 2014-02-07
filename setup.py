@@ -23,22 +23,27 @@ import numpy
 import os
 
 HOME = os.path.expanduser('~')
+MINCDIR = '/opt/minc'
 
 ext_modules=[Extension(
-                   "pyezminc",                 # name of extension
-                   ["pyezminc.pyx", 'pyezminc.pxd'], #  our Cython source
+                   "pyezminc",                                              # name of extension
+                   ["pyezminc.pyx", 'pyezminc.pxd'],                        # our Cython source
                    libraries=['volume_io2', 'minc2','z','m', 'minc_io'],
-                   #extra_objects = ['/hydra/home/hassemlal/local/lib/libminc_io.a'],
-                   include_dirs = [os.path.join(HOME, 'local','include'),
-                                   '/opt/minc/include',
+                   include_dirs = [os.path.join(MINCDIR,'include'),
                                    numpy.get_include()],
-                   library_dirs = [os.path.join(HOME, 'local', 'lib'),
-                                   '/opt/minc/lib'],
-                   runtime_library_dirs = ['/opt/minc/lib'],
+                   library_dirs = [os.path.join(MINCDIR,'lib')],
+                   runtime_library_dirs = [os.path.join(MINCDIR,'lib')],    # RPATH settings
+                   #extra_objects = [os.path.join(MINCDIR,'libminc_io.a')], # Use this if using static link
                    language="c++")]  # causes Cython to create C++ source
 
 setup(
       name = 'pyezminc',
+      version = '1.0',
+      url = 'https://github.com/BIC-MNI/pyezminc',
+      author = 'Haz-Edine Assemlal',
+      author_email = 'haz-edine@assemlal.com',
       cmdclass={'build_ext': build_ext},
-      ext_modules = ext_modules
+      py_modules = ['minc'],
+      ext_modules = ext_modules,
+      license = 'GNU GPL v2'
 )
