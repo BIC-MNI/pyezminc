@@ -97,6 +97,9 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_read_float() except +
         void setup_read_int() except +
         void open(char *path, bool positive_directions, bool metadate_only, bool rw) except +
+        void open(char *path, bool positive_directions, bool metadate_only) except +
+        void open(char *path, bool positive_directions) except +
+        void open(char *path) except +
 
     cdef cppclass minc_1_writer:
         minc_1_writer() except +
@@ -106,6 +109,7 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_write_int() except +
         void open(char *path, minc_1_base imitate) except +
         void open(char *path, char *imitate_file) except +
+        void open(char *path) except +
         void copy_headers(minc_1_base src) except +
         void append_history(char *append_history) except +
 

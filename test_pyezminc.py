@@ -136,10 +136,13 @@ class TestIterator(unittest.TestCase):
     def tearDown(self):
         del self.img
   
-    def testLoad(self):
-        img = minc.Image()
-        img.load(self.fname)
-        self.assertTrue(isinstance(img.data, np.ndarray))
+    def testSum(self):
+        it=input_iterator_real(self.fname)
+        sum=0.0
+        for i in it:
+            sum+=i
+        print "sum={}".format(sum)
+        self.assertEqual(sum,252574364.9)
 
 class TestLabel(unittest.TestCase):
 

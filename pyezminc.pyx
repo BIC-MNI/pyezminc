@@ -255,25 +255,34 @@ cdef class EZMincWrapper(object):
         
 cdef class input_iterator_real(object):
     cdef minc_input_iterator[double] * _it
+    cdef minc_1_reader *rdrptr
+    cdef public opened
 
-    def __cinit__(self,rdr=None):
-        if rdr is None:
-            self._it=new minc_input_iterator[double]()
-        else:
-            self._it=new minc_input_iterator[double](<minc_1_reader&>(rdr.rdrptr))
+    def __cinit__(self,file):
+        self.rdrptr = new minc_1_reader()
+        self.rdrptr.open(<char*?>file)
+        self.rdrptr.setup_read_double()
+        self._it = new minc_input_iterator[double](self.rdrptr[0])
+    
+    def __iter__(self):
+        return self
 
     def __next__(self):
-        return self._it.next()
+        if not self._it.next():
+          raise StopIteration
+        else:
+            return self.value()
 
     def begin(self):
         self._it.begin()
 
     def last(self):
-        self._it.last()
+        return self._it.last()
 
     def value(self):
         return self._it.value()
 
     def __dealloc__ (self):
         del self._it
+        del self.rdrptr
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
