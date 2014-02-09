@@ -129,12 +129,10 @@ def create_tmp_filename (suffix='.mnc.gz', prefix='tmp_', remove=True):
 
 class TestIterator(unittest.TestCase):
     def setUp(self):
-
         self.fname = os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc')
-        self.img = minc.Image(self.fname)
         
     def tearDown(self):
-        del self.img
+        pass
   
     def testSum(self):
         it=input_iterator_real(self.fname)

@@ -107,14 +107,16 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_write_double() except +
         void setup_write_float() except +
         void setup_write_int() except +
+        void open(char *path, minc_1_reader imitate) except +
         void open(char *path, minc_1_base imitate) except +
         void open(char *path, char *imitate_file) except +
         void open(char *path) except +
         void copy_headers(minc_1_base src) except +
+        void copy_headers(minc_1_reader src) except +
         void append_history(char *append_history) except +
 
 cdef extern from "minc_1_simple.h" namespace "minc":
-    
+
     cdef cppclass minc_input_iterator[T]:
         vector[long] cur() const
         minc_input_iterator() except +
