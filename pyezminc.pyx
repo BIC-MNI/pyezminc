@@ -318,33 +318,81 @@ cdef class input_iterator_int(object):
     def __dealloc__ (self):
         del self._it
         del self.rdrptr
-        
-        
+
+
 cdef class output_iterator_real(object):
-    cdef minc_output_iterator[double] * _it
+    cdef minc_output_iterator[float] * _it
+    cdef minc_1_writer *wrtptr
+
+#    cdef __cinit__(self,file,input_iterator_int reference):
+#       self.wrtptr = new minc_1_writer()
+#        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+#        self.wrtptr.setup_write_float()
+#        self._it = new minc_output_iterator[float](self.wrtptr[0])
+#        self._it.begin()
+
+#    cdef __cinit__(self, file,char*  ref):
+#        self.wrtptr = new minc_1_writer()
+#        self.wrtptr.open(<char*?>file,<char*?>ref)
+#        self.wrtptr.setup_write_float()
+#        self._it = new minc_output_iterator[float](self.wrtptr[0])
+#        self._it.begin()
+
+    def __cinit__(self,file,input_iterator_real reference):
+        self.wrtptr = new minc_1_writer()
+        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+        self.wrtptr.setup_write_float()
+        self._it = new minc_output_iterator[float](self.wrtptr[0])
+        self._it.begin()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._it.next():
+            raise StopIteration
+        else:
+            return 0
+
+    def begin(self):
+        self._it.begin()
+
+    def last(self):
+        return self._it.last()
+
+    def value(self,float value):
+        self._it.value(value)
+
+    def __dealloc__ (self):
+        del self._it
+        del self.wrtptr
+
+
+cdef class output_iterator_int(object):
+    cdef minc_output_iterator[int] * _it
     cdef minc_1_writer *wrtptr
 
     def __cinit__(self,file,input_iterator_int reference):
         self.wrtptr = new minc_1_writer()
         self.wrtptr.open(<char*?>file,reference.rdrptr[0])
         self.wrtptr.setup_write_double()
-        self._it = new minc_output_iterator[double](self.wrtptr[0])
+        self._it = new minc_output_iterator[int](self.wrtptr[0])
         self._it.begin()
         
     def __cinit__(self,file,input_iterator_real reference):
         self.wrtptr = new minc_1_writer()
         self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-        self.wrtptr.setup_write_double()
-        self._it = new minc_output_iterator[double](self.wrtptr[0])
+        self.wrtptr.setup_write_int()
+        self._it = new minc_output_iterator[int](self.wrtptr[0])
         self._it.begin()
 
-    def __cinit__(self,file,input_iterator_real reference):
+    def __cinit__(self,file,char * reference):
         self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-        self.wrtptr.setup_write_double()
-        self._it = new minc_output_iterator[double](self.wrtptr[0])
+        self.wrtptr.open(<char*?>file,<char*?>reference)
+        self.wrtptr.setup_write_int()
+        self._it = new minc_output_iterator[int](self.wrtptr[0])
         self._it.begin()
-    
+
     def __iter__(self):
         return self
 
@@ -361,11 +409,10 @@ cdef class output_iterator_real(object):
         return self._it.last()
 
     def value(self,value):
-        self._it.value(value)
+        self._it.value(<int?>value)
 
     def __dealloc__ (self):
         del self._it
         del self.wrtptr
-
         
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
