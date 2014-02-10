@@ -232,7 +232,7 @@ cdef class EZMincWrapper(object):
                 elif attrtype == NC_INT:
                     attrvalue = (<minc_1_base*>self.rdrptr).att_value_int(varname.c_str(), attrname.c_str())
                 elif attrtype == NC_FLOAT:
-		    # For unknown reason, ezminc does not have att_value_float. A bit hackish but should work.
+                    # For unknown reason, ezminc does not have att_value_float. A bit hackish but should work.
                     attrvalue = (<minc_1_base*>self.rdrptr).att_value_double(varname.c_str(), attrname.c_str())
                 elif attrtype == NC_DOUBLE:
                     attrvalue = (<minc_1_base*>self.rdrptr).att_value_double(varname.c_str(), attrname.c_str())
@@ -324,27 +324,24 @@ cdef class output_iterator_real(object):
     cdef minc_output_iterator[float] * _it
     cdef minc_1_writer *wrtptr
 
-#    cdef __cinit__(self,file,input_iterator_int reference):
-#       self.wrtptr = new minc_1_writer()
-#        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-#        self.wrtptr.setup_write_float()
-#        self._it = new minc_output_iterator[float](self.wrtptr[0])
-#        self._it.begin()
+    def __cinit__(self,file,reference=None):
+        if reference is not None:
+            self.wrtptr = new minc_1_writer()
+            self.wrtptr.open(<char*?>file,<char*?>reference)
+            self.wrtptr.setup_write_float()
+            self._it = new minc_output_iterator[float](self.wrtptr[0])
+            self._it.begin()
+        else:
+            self.wrtptr = NULL
+            self._it = NULL
 
-#    cdef __cinit__(self, file,char*  ref):
-#        self.wrtptr = new minc_1_writer()
-#        self.wrtptr.open(<char*?>file,<char*?>ref)
-#        self.wrtptr.setup_write_float()
-#        self._it = new minc_output_iterator[float](self.wrtptr[0])
-#        self._it.begin()
-
-    def __cinit__(self,file,input_iterator_real reference):
+    def open(self,file,input_iterator_real reference):
         self.wrtptr = new minc_1_writer()
         self.wrtptr.open(<char*?>file,reference.rdrptr[0])
         self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[float](self.wrtptr[0])
         self._it.begin()
-
+        
     def __iter__(self):
         return self
 
@@ -364,32 +361,31 @@ cdef class output_iterator_real(object):
         self._it.value(value)
 
     def __dealloc__ (self):
-        del self._it
-        del self.wrtptr
+        if self._it != NULL:
+            del self._it
+        if self.wrtptr != NULL:
+            del self.wrtptr
 
 
 cdef class output_iterator_int(object):
     cdef minc_output_iterator[int] * _it
     cdef minc_1_writer *wrtptr
 
-    def __cinit__(self,file,input_iterator_int reference):
-        self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-        self.wrtptr.setup_write_double()
-        self._it = new minc_output_iterator[int](self.wrtptr[0])
-        self._it.begin()
-        
-    def __cinit__(self,file,input_iterator_real reference):
-        self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-        self.wrtptr.setup_write_int()
-        self._it = new minc_output_iterator[int](self.wrtptr[0])
-        self._it.begin()
+    def __cinit__(self,file,reference=None):
+        if reference is not None:
+            self.wrtptr = new minc_1_writer()
+            self.wrtptr.open(<char*?>file,<char*?>reference)
+            self.wrtptr.setup_write_int()
+            self._it = new minc_output_iterator[int](self.wrtptr[0])
+            self._it.begin()
+        else:
+            self.wrtptr = NULL
+            self._it = NULL
 
-    def __cinit__(self,file,char * reference):
+    def open(self,file,input_iterator_int reference):
         self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,<char*?>reference)
-        self.wrtptr.setup_write_int()
+        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+        self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[int](self.wrtptr[0])
         self._it.begin()
 
@@ -414,5 +410,5 @@ cdef class output_iterator_int(object):
     def __dealloc__ (self):
         del self._it
         del self.wrtptr
-        
+
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
