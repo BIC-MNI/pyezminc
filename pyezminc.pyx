@@ -40,11 +40,11 @@ NC_INT =    4    #/* signed 4 byte integer */
 NC_FLOAT =  5    #/* single precision floating point number */
 NC_DOUBLE = 6    #/* double precision floating point number */
 
-nctype_to_numpy = {NC_BYTE : {True:np.int8, False:np.uint8},
-                   NC_CHAR : {True:np.int8, False:np.uint8},
-                   NC_SHORT : {True:np.int16, False:np.uint16},
-                   NC_INT : {True:np.int32, False:np.uint32},
-                   NC_FLOAT : {True:np.float32, False:np.float32},
+nctype_to_numpy = {NC_BYTE   : {True:np.int8,    False:np.uint8},
+                   NC_CHAR   : {True:np.int8,    False:np.uint8},
+                   NC_SHORT  : {True:np.int16,   False:np.uint16},
+                   NC_INT    : {True:np.int32,   False:np.uint32},
+                   NC_FLOAT  : {True:np.float32, False:np.float32},
                    NC_DOUBLE : {True:np.float64, False:np.float64},
                    }  
 
