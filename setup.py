@@ -24,7 +24,7 @@ import numpy
 import os
 
 HOME = os.path.expanduser('~')
-MINCDIR = '/opt/minc'
+MINCDIR = '/opt/minc_itk4'
 
 
 ext_modules=[Extension(
@@ -46,7 +46,7 @@ setup(
     author_email = 'haz-edine@assemlal.com',
     cmdclass={'build_ext': build_ext},
     py_modules = ['minc'],
-    ext_modules = cythonize(ext_modules,gdb_debug=True),
+    ext_modules = ext_modules,
     license = 'GNU GPL v2'
 )
 
