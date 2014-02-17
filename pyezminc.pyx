@@ -257,13 +257,28 @@ cdef class input_iterator_real(object):
     cdef minc_input_iterator[double] * _it
     cdef minc_1_reader *rdrptr
 
-    def __cinit__(self,file):
+    def __cinit__(self,file=None):
+        if file is not None:
+            self.rdrptr = new minc_1_reader()
+            self.rdrptr.open(<char*?>file)
+            self.rdrptr.setup_read_double()
+            self._it = new minc_input_iterator[double](self.rdrptr[0])
+            self._it.begin()
+        else:
+            self._it = NULL
+            self.rdrptr = NULL
+    
+    def open(self,file):
+        if self._it != NULL:
+            del self._it
+        if self.rdrptr != NULL:
+            del self.rdrptr
         self.rdrptr = new minc_1_reader()
         self.rdrptr.open(<char*?>file)
         self.rdrptr.setup_read_double()
         self._it = new minc_input_iterator[double](self.rdrptr[0])
         self._it.begin()
-    
+            
     def __iter__(self):
         return self
 
@@ -283,20 +298,37 @@ cdef class input_iterator_real(object):
         return self._it.value()
 
     def __dealloc__ (self):
-        del self._it
-        del self.rdrptr
+        if self._it!= NULL:
+            del self._it
+        if self.rdrptr!= NULL:
+            del self.rdrptr
 
 cdef class input_iterator_int(object):
     cdef minc_input_iterator[int] * _it
     cdef minc_1_reader *rdrptr
 
-    def __cinit__(self,file):
+    def __cinit__(self,file=None):
+        if file is not None:
+            self.rdrptr = new minc_1_reader()
+            self.rdrptr.open(<char*?>file)
+            self.rdrptr.setup_read_int()
+            self._it = new minc_input_iterator[int](self.rdrptr[0])
+            self._it.begin()
+        else:
+            self._it = NULL
+            self.rdrptr = NULL
+    
+    def open(self,file):
+        if self._it != NULL:
+            del self._it
+        if self.rdrptr != NULL:
+            del self.rdrptr
         self.rdrptr = new minc_1_reader()
         self.rdrptr.open(<char*?>file)
         self.rdrptr.setup_read_int()
         self._it = new minc_input_iterator[int](self.rdrptr[0])
         self._it.begin()
-    
+            
     def __iter__(self):
         return self
 
@@ -316,9 +348,10 @@ cdef class input_iterator_int(object):
         return self._it.value()
 
     def __dealloc__ (self):
-        del self._it
-        del self.rdrptr
-
+        if self._it!= NULL:
+            del self._it
+        if self.rdrptr!= NULL:
+            del self.rdrptr
 
 cdef class output_iterator_real(object):
     cdef minc_output_iterator[float] * _it
@@ -336,12 +369,16 @@ cdef class output_iterator_real(object):
             self._it = NULL
 
     def open(self,file,input_iterator_real reference):
+        if self._it != NULL:
+            del self._it
+        if self.wrtptr != NULL:
+            del self.wrtptr
         self.wrtptr = new minc_1_writer()
         self.wrtptr.open(<char*?>file,reference.rdrptr[0])
         self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[float](self.wrtptr[0])
         self._it.begin()
-        
+
     def __iter__(self):
         return self
 
@@ -383,6 +420,11 @@ cdef class output_iterator_int(object):
             self._it = NULL
 
     def open(self,file,input_iterator_int reference):
+        if self._it != NULL:
+            del self._it
+        if self.wrtptr != NULL:
+            del self.wrtptr
+            
         self.wrtptr = new minc_1_writer()
         self.wrtptr.open(<char*?>file,reference.rdrptr[0])
         self.wrtptr.setup_write_float()
@@ -408,7 +450,9 @@ cdef class output_iterator_int(object):
         self._it.value(<int?>value)
 
     def __dealloc__ (self):
-        del self._it
-        del self.wrtptr
+        if self._it != NULL:
+            del self._it
+        if self.wrtptr != NULL:
+            del self.wrtptr
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

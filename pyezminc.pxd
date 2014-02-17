@@ -115,7 +115,7 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void copy_headers(minc_1_reader src) except +
         void append_history(char *append_history) except +
 
-cdef extern from "minc_1_simple.h" namespace "minc":
+cdef extern from "minc_1_iterators.h" namespace "minc":
 
     cdef cppclass minc_input_iterator[T]:
         vector[long] cur() const
