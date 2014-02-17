@@ -474,8 +474,11 @@ cdef class parallel_input_iterator:
     def last(self):
         return self._it.last()
 
-    def value(self,np.ndarray ret):
+    def value(self,np.ndarray ret):#[np.float64_t, ndim=1]
         #cdef np.ndarray ret = np.ndarray(shape=[self._it.dim()], dtype=np.float64,order='C')
+#        if ret is None:
+#            ret = np.ndarray(shape=[self._it.dim()], dtype=np.float64,order='C')
+
         self._it.value(<double*>ret.data)
         return ret
 
@@ -501,16 +504,16 @@ cdef class parallel_output_iterator:
     def last(self):
         return self._it.last()
 
-    def value(self,np.ndarray v):
-        cdef np.ndarray v1
+    def value(self,np.ndarray v):#[np.float64_t, ndim=1]
+#        cdef np.ndarray v1
         # TODO: check the dimensions and data type ?
       
-        if not v.flags['C_CONTIGUOUS']:
-            # Array is not contiguous, need to make contiguous copy
-            v1=v.data.copy(order='C')
-            self._it.value(<double*>v1.data)
-        else:
-            self._it.value(<double*>v.data)
+        #if not v.flags['C_CONTIGUOUS']:
+            ## Array is not contiguous, need to make contiguous copy
+            #v1=v.data.copy(order='C')
+            #self._it.value(<double*>v1.data)
+        #else:
+        self._it.value(<double*>v.data)
 
     def open(self,vector[string] output,string ref):
         cdef minc_1_reader rdr

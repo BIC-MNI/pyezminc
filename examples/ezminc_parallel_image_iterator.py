@@ -7,15 +7,20 @@ import os
 import pyezminc
 import numpy as np
 
-#DATA_PATH = '/opt/minc/share/icbm152_model_09c'
-DATA_PATH = '/extra/mni'
+DATA_PATH = '/opt/minc/share/icbm152_model_09c'
+#DATA_PATH = '/extra/mni'
 
 if __name__ == "__main__":
     
     inp=pyezminc.parallel_input_iterator()
     out=pyezminc.parallel_output_iterator()
     
-    inp.open([os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc'),
+    inp.open([os.path.join(DATA_PATH,   'mni_icbm152_t1_tal_nlin_sym_09c.mnc'),
+                os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc'),
+                os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc'),
+                os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc'),
+                os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc'),
+                os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc'),
                 os.path.join(DATA_PATH, 'mni_icbm152_t2_tal_nlin_sym_09c.mnc')],
                 os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c_mask.mnc'))
 
@@ -23,15 +28,17 @@ if __name__ == "__main__":
     inp.begin()
 
     #out.begin()
-    s=np.zeros(shape=[2],dtype=np.float64,order='C')
+    s=np.zeros(shape=[7],dtype=np.float64,order='C')
     qqq=np.empty_like(s)
     try:
         while True:
             #out.value(inp.value())
             qqq=inp.value(qqq)
-            #out.value(qqq)
+            res=qqq[0:2]
+            out.value(res)
 
             s=s+qqq
+            
             inp.next()
             out.next()
     except StopIteration:

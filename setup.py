@@ -23,14 +23,19 @@ from Cython.Build import cythonize
 import numpy
 import os
 
-HOME = os.path.expanduser('~')
+#HOME = os.path.expanduser('~')
+
+# TODO: locate minc library
 MINCDIR = '/opt/minc_itk4'
+
+# TODO: determine if volume_io is still availabel as separate library
+MINCLIBS= ['minc2','z','m', 'minc_io'] 
 
 
 ext_modules=[Extension(
                     "pyezminc",                                              # name of extension
                     ["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
-                    libraries=['minc2','z','m', 'minc_io'],                  # TODO: determine if volume_io is still availabel as separate library
+                    libraries=MINCLIBS,
                     include_dirs = [os.path.join(MINCDIR,'include'),
                                     numpy.get_include()],
                     library_dirs = [os.path.join(MINCDIR,'lib')],
