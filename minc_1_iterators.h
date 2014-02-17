@@ -12,8 +12,8 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#ifndef __MINC_1_SIMPLE_H__
-#define __MINC_1_SIMPLE_H__
+#ifndef __MINC_1_ITERATORS_H__
+#define __MINC_1_ITERATORS_H__
 
 #include "minc_1_rw.h"
 
@@ -269,7 +269,57 @@ namespace minc
     }
   }; 
 
-  //! will attempt to laod the whole volume in T Z Y X V order into buffer, file should be prepared (setup_read_XXXX)
+  class minc_parallel_input_iterator
+  {
+  protected:
+    std::vector<minc_1_reader> files;
+    std::vector<minc_input_iterator<double> > in;
+    minc_1_reader mask;
+    minc_input_iterator<unsigned char> mask_it;
+    bool _have_mask;
+  public:
+    minc_parallel_input_iterator():_have_mask(false)
+    {}
+      
+    void begin(void);
+    bool last(void);
+    bool next(void);
+    
+    bool have_mask(void) const
+    {
+      return _have_mask;
+    }
+    
+    bool mask_value() const
+    {
+      if(_have_mask)
+        return mask_it.value();
+      return true;
+    }
+    
+    void value(std::vector<double>&v) const;
+      
+    void open(const std::vector<std::string> &in_files,const std::string &mask_file="");
+  };
+
+  class minc_parallel_output_iterator
+  {
+  protected:
+    std::vector<minc_1_writer> wrt;
+    std::vector<minc_output_iterator<double> > out;
+  public:
+    minc_parallel_output_iterator()
+    {}
+      
+    void begin(void);
+    bool last(void);
+    bool next(void);
+    void value(const std::vector<double>&v);
+    void open(const std::vector<std::string> &out_files,const minc_info & output_info,const char* history=NULL);
+  };
+
+
+  //! will attempt to load the whole volume in T Z Y X V order into buffer, file should be prepared (setup_read_XXXX)
   template<class T> void load_standard_volume(minc_1_reader& rw, T* volume)
   {
     std::vector<size_t> strides(MAX_VAR_DIMS,0);
@@ -316,8 +366,7 @@ namespace minc
   }
   
   
-  
 };//minc
 
 
-#endif //__MINC_1_SIMPLE_H__
+#endif //__MINC_1_ITERATORS_H__

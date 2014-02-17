@@ -28,7 +28,7 @@ MINCDIR = '/opt/minc'
 
 ext_modules=[Extension(
                     "pyezminc",                                              # name of extension
-                    ["pyezminc.pyx", 'pyezminc.pxd'],                        # our Cython source
+                    ["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
                     libraries=['minc2','z','m', 'minc_io'],                  # TODO: determine if volume_io is still availabel as separate library
                     include_dirs = [os.path.join(MINCDIR,'include'),
                                     numpy.get_include()],
