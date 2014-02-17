@@ -134,7 +134,9 @@ namespace minc
     void attach(minc_1_reader& rw)
     {
       minc_input_iterator_base::attach(rw);
-      _buf.resize(rw.slice_len());
+
+      _buf.resize(_rw->slice_len());
+      _cur.resize(MAX_VAR_DIMS,0);
     }
     
     
@@ -176,8 +178,6 @@ namespace minc
     
     void begin(void)
     {
-      _cur.resize(MAX_VAR_DIMS,0);
-      _buf.resize(_rw->slice_len());
       _count=0;
       _rw->begin();
       _rw->read(&_buf[0]);
@@ -211,7 +211,8 @@ namespace minc
     void attach(minc_1_writer& rw)
     {
       minc_output_iterator_base::attach(rw);
-      _buf.resize(rw.slice_len());
+      _buf.resize(_rw->slice_len());
+      _cur.resize(MAX_VAR_DIMS,0);
     }  
     
     ~minc_output_iterator()
@@ -256,8 +257,6 @@ namespace minc
         
     void begin(void)
     {
-      _buf.resize(_rw->slice_len());
-      _cur.resize(MAX_VAR_DIMS,0);
       _count=0;
       _rw->begin();
       _cur=_rw->current_slice();

@@ -148,7 +148,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         bool last() except +
         void begin() except +
         const T& value()
-        
+
     cdef cppclass minc_output_iterator[T]:
         vector[long] cur() const
         minc_output_iterator()
@@ -159,7 +159,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         bool last() except +
         void begin() except +
         void value(const T&)
-        
+
     cdef cppclass minc_parallel_input_iterator:
         bool next() except +
         bool last() except +
@@ -171,7 +171,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         void open(const vector[string] &in_files,const string & mask_file)
         void open(const vector[string] &in_files)
         size_t dim()
-        
+
     cdef cppclass minc_parallel_output_iterator:
         bool next() except +
         bool last() except +

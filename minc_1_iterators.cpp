@@ -14,14 +14,16 @@ namespace minc
       mask.open(mask_file.c_str());
       mask.setup_read_byte();
       mask_it.attach(mask);
-      //mask_it.begin();
+      
       _have_mask=true;
+      
+      mask_it.begin();
     }
 
     files.resize(in_files.size());
     in.resize(in_files.size());
   
-    for(int i=0;i<in_files.size();i++)
+    for(size_t i=0;i<in_files.size();i++)
     {
       files[i].open(in_files[i].c_str());
       if(i==0 && _have_mask)
@@ -61,7 +63,8 @@ namespace minc
       }
       files[i].setup_read_double();
       in[i].attach(files[i]);
-      //in[i].begin();
+      
+      in[i].begin();
     }
   }
 
@@ -86,10 +89,17 @@ namespace minc
     bool _good=true;
     
     if(_have_mask)
-      _good = _good && mask_it.next();
+    {
+      bool g=mask_it.next();
+      _good = _good && g;
+    }
 
     for(size_t i=0;i<in.size();i++)
-      _good = _good && in[i].next();
+    {
+      bool g=in[i].next();
+      _good = _good && g;
+    }
+    
     return _good;
   }
   
@@ -113,7 +123,7 @@ namespace minc
     wrt.resize(out_files.size());
     out.resize(out_files.size());
             
-    for(int k=0;k<out_files.size();k++)
+    for(size_t k=0;k<out_files.size();k++)
     {      
       wrt[k].open(out_files[k].c_str(),output_info,2,NC_FLOAT);
       if(history)
@@ -122,14 +132,15 @@ namespace minc
       wrt[k].setup_write_double();
       
       out[k].attach(wrt[k]);
-      //out[k].begin();
+      
+      out[k].begin();
     }
   }
   
   void minc_parallel_output_iterator::begin(void)
   {
-    for(int k=0;k<out.size();k++)
-      out.begin();
+    for(size_t k=0;k<out.size();k++)
+      out[k].begin();
   }
   
   bool minc_parallel_output_iterator::last(void)
@@ -140,21 +151,24 @@ namespace minc
   bool minc_parallel_output_iterator::next(void)
   {
     bool good=true;
-    for(int k=0;k<out.size();k++)
-      good = good && out[k].next();
+    for(size_t k=0;k<out.size();k++)
+    {
+      bool g=out[k].next(); //have to make sure we actually execute this for all iterators
+      good = good && g;
+    }
     return good;
   }
   
   void minc_parallel_output_iterator::value(const std::vector<double>&v)
   {
     assert(v.size()==out.size());
-    for(int k=0;k<out.size();k++)
+    for(size_t k=0;k<out.size();k++)
       out[k].value(v[k]);
   }
   
   void minc_parallel_output_iterator::value(const double* v)
   {
-    for(int k=0;k<out.size();k++)
+    for(size_t k=0;k<out.size();k++)
       out[k].value(v[k]);
   }
 }; //minc
