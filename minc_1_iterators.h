@@ -296,10 +296,15 @@ namespace minc
         return mask_it.value();
       return true;
     }
-    
+  
     void value(std::vector<double>&v) const;
-      
+    void value(double *v);
     void open(const std::vector<std::string> &in_files,const std::string &mask_file="");
+  
+    size_t dim(void) const
+    {
+      return in.size();
+    }
   };
 
   class minc_parallel_output_iterator
@@ -315,7 +320,14 @@ namespace minc
     bool last(void);
     bool next(void);
     void value(const std::vector<double>&v);
+    void value(const double *v);
     void open(const std::vector<std::string> &out_files,const minc_info & output_info,const char* history=NULL);
+    
+    size_t dim(void) const
+    {
+      return out.size();
+    }
+    
   };
 
 

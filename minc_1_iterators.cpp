@@ -101,6 +101,12 @@ namespace minc
       v[i]=in[i].value();
   }
   
+  void minc_parallel_input_iterator::value(double *v)
+  {
+    for(size_t i=0;i<in.size();i++)
+      v[i]=in[i].value();
+  }
+  
   
   void minc_parallel_output_iterator::open(const std::vector<std::string> &out_files,const minc_info & output_info,const char* history)
   {
@@ -142,6 +148,12 @@ namespace minc
   void minc_parallel_output_iterator::value(const std::vector<double>&v)
   {
     assert(v.size()==out.size());
+    for(int k=0;k<out.size();k++)
+      out[k].value(v[k]);
+  }
+  
+  void minc_parallel_output_iterator::value(const double* v)
+  {
     for(int k=0;k<out.size();k++)
       out[k].value(v[k]);
   }

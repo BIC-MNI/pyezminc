@@ -455,4 +455,59 @@ cdef class output_iterator_int(object):
         if self.wrtptr != NULL:
             del self.wrtptr
 
+
+cdef class parallel_input_iterator:
+    cdef minc_parallel_input_iterator _it
+    
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._it.next():
+            raise StopIteration
+        else:
+            return 0
+
+    def begin(self):
+        self._it.begin()
+
+    def last(self):
+        return self._it.last()
+
+    def value(self):
+        cdef np.ndarray ret = np.zeros([self._it.dim()], dtype=np.float64)
+        self._it.value(<double*>ret.data)
+        return ret
+
+    def open(self,vector[string] output,string mask=""):
+        self._it.open(output,mask)
+
+
+cdef class parallel_output_iterator:
+    cdef minc_parallel_output_iterator _it
+    
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._it.next():
+            raise StopIteration
+        else:
+            return 0
+
+    def begin(self):
+        self._it.begin()
+
+    def last(self):
+        return self._it.last()
+
+    def value(self,np.ndarray v):
+        # TODO: check the dimensions and data type ?
+        self._it.value(<double*>v.data)
+
+    def open(self,vector[string] output,string ref):
+        cdef minc_1_reader rdr
+        rdr.open(<char*?>ref.c_str(),True,True)
+        self._it.open(output,rdr.info())
+
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
