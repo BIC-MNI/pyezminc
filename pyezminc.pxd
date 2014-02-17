@@ -40,6 +40,22 @@ cdef extern from "netcdf.h":
     ctypedef int nc_type
 
 cdef extern from "minc_1_rw.h" namespace "minc":
+
+    cdef enum dimensions: 
+        DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
+
+    cdef cppclass dim_info:
+        dim_info(int l, double sta,double spa,dimensions d,bool have_dir_cos)
+        dim_info(int l, double sta,double spa,dimensions d)
+        size_t length
+        double step,start
+        bool have_dir_cos
+        double dir_cos[3]
+        string name
+        dimensions  dim
+        
+    ctypedef vector[dim_info] minc_info
+    
     cdef cppclass minc_1_base:
         minc_1_base()
         void close() except +
@@ -54,41 +70,43 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         double ndir_cos(int i, int j)
         bool have_dir_cos(int i)
 
-        int var_id(char *var_name) 
-        long var_length(char *var_name) 
+        int var_id(const char *var_name) 
+        long var_length(const char *var_name) 
         long var_length(int var_id) 
         int var_number() 
         string var_name(int no) 
-        int att_number(char *var_name) 
+        int att_number(const char *var_name) 
         int att_number(int var_no) 
-        string att_name(char *var_name,int no) 
+        string att_name(const char *var_name,int no) 
         string att_name(int varid,int no) 
         
-        string att_value_string(char *var_name,char *att_name) 
-        string att_value_string(int varid,char *att_name) 
+        string att_value_string(const char *var_name,const char *att_name) 
+        string att_value_string(int varid,const char *att_name) 
         
-        vector[double] att_value_double(char *var_name,char *att_name) 
-        vector[int] att_value_int(char *var_name,char *att_name) 
-        vector[short] att_value_short(char *var_name,char *att_name) 
-        vector[unsigned char] att_value_byte(char *var_name,char *att_name) 
+        vector[double] att_value_double(const char *var_name,const char *att_name) 
+        vector[int] att_value_int(const char *var_name,const char *att_name) 
+        vector[short] att_value_short(const char *var_name,const char *att_name) 
+        vector[unsigned char] att_value_byte(const char *var_name,const char *att_name) 
         
-        vector[double] att_value_double(int varid,char *att_name) 
-        vector[int] att_value_int(int varid,char *att_name) 
-        vector[short] att_value_short(int varid,char *att_name) 
-        vector[unsigned char] att_value_byte(int varid,char *att_name) 
+        vector[double] att_value_double(int varid,const char *att_name) 
+        vector[int] att_value_int(int varid,const char *att_name) 
+        vector[short] att_value_short(int varid,const char *att_name) 
+        vector[unsigned char] att_value_byte(int varid,const char *att_name) 
 
         nc_type att_type(char *var_name,char *att_name) 
         nc_type att_type(int varid,char *att_name) 
         int att_length(char *var_name,char *att_name) 
         int att_length(int varid,char *att_name) 
 
-        int create_var_id(char *varname)
-        void insert(char *varname,char *attname,double val)
-        void insert(char *varname,char *attname,char* val)
-        void insert(char *varname,char *attname,vector[double] &val)
-        void insert(char *varname,char *attname,vector[int] &val)
-        void insert(char *varname,char *attname,vector[short] &val)
-        void insert(char *varname,char *attname,vector[unsigned char] &val)
+        int create_var_id(const char *varname)
+        void insert(const char *varname,const char *attname,double val)
+        void insert(const char *varname,const char *attname,const char* val)
+        void insert(const char *varname,const char *attname,const vector[double] &val)
+        void insert(const char *varname,const char *attname,const vector[int] &val)
+        void insert(const char *varname,const char *attname,const vector[short] &val)
+        void insert(const char *varname,const char *attname,const vector[unsigned char] &val)
+        
+        minc_info info()
       
     cdef cppclass minc_1_reader:
         minc_1_reader() except +
@@ -96,10 +114,11 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_read_double() except +
         void setup_read_float() except +
         void setup_read_int() except +
-        void open(char *path, bool positive_directions, bool metadate_only, bool rw) except +
-        void open(char *path, bool positive_directions, bool metadate_only) except +
-        void open(char *path, bool positive_directions) except +
-        void open(char *path) except +
+        void open(const char *path, bool positive_directions, bool metadate_only, bool rw) except +
+        void open(const char *path, bool positive_directions, bool metadate_only) except +
+        void open(const char *path, bool positive_directions) except +
+        void open(const char *path) except +
+        minc_info info()
 
     cdef cppclass minc_1_writer:
         minc_1_writer() except +
@@ -107,19 +126,21 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_write_double() except +
         void setup_write_float() except +
         void setup_write_int() except +
-        void open(char *path, minc_1_reader imitate) except +
-        void open(char *path, minc_1_base imitate) except +
-        void open(char *path, char *imitate_file) except +
-        void open(char *path) except +
-        void copy_headers(minc_1_base src) except +
-        void copy_headers(minc_1_reader src) except +
-        void append_history(char *append_history) except +
+        void open(const char *path, minc_1_reader imitate) except +
+        void open(const char *path, minc_1_base imitate) except +
+        void open(const char *path, char *imitate_file) except +
+        void open(const char *path, const minc_info &info,int slice_dimensions,nc_type datatype,bool signed) except +
+        void open(const char *path) except +
+        void copy_headers(const minc_1_base &src) except +
+        void copy_headers(const minc_1_reader &src) except +
+        void append_history(const char *append_history) except +
+        minc_info info()
 
 cdef extern from "minc_1_iterators.h" namespace "minc":
 
     cdef cppclass minc_input_iterator[T]:
         vector[long] cur() const
-        minc_input_iterator() except +
+        minc_input_iterator()
         minc_input_iterator(minc_1_reader&) except +
         minc_input_iterator(minc_input_iterator&) except +
         attach(minc_1_reader&) except +
@@ -130,7 +151,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         
     cdef cppclass minc_output_iterator[T]:
         vector[long] cur() const
-        minc_output_iterator() except +
+        minc_output_iterator()
         minc_output_iterator(minc_1_writer&) except +
         minc_output_iterator(minc_output_iterator&) except +
         attach(minc_1_writer&) except +
@@ -138,6 +159,24 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         bool last() except +
         void begin() except +
         void value(const T&)
+        
+    cdef cppclass minc_parallel_input_iterator:
+        bool next() except +
+        bool last() except +
+        void begin() except +
+        bool have_mask()
+        bool mask_value()
+        void value(vector[double]& v)
+        void open(const vector[string] &in_files,const string & mask_file)
+        void open(const vector[string] &in_files)
+        
+    cdef cppclass minc_parallel_output_iterator:
+        bool next() except +
+        bool last() except +
+        void begin() except +
+        void value(const vector[double]& v)
+        void open(const vector[string] &out_files,const minc_info & output_info,const char* history)
+        void open(const vector[string] &out_files,const minc_info & output_info)
 
     cdef void load_standard_volume(minc_1_reader& rw, double *vol) except +
     cdef void load_standard_volume(minc_1_reader& rw, float *vol) except +
