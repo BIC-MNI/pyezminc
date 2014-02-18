@@ -11,7 +11,7 @@ import rpy2.robjects as ro
 
 from rpy2.robjects.numpy2ri import numpy2ri
 from rpy2.robjects.packages import importr
-
+from rpy2.rinterface import RRuntimeError
 
 def load_csv(csv_file):
     '''Load csv file into a dictionary'''
@@ -33,37 +33,53 @@ if __name__ == "__main__":
     ro.conversion.py2ri = numpy2ri
     # import R objects
     stats = importr('stats')
-    base = importr('base')
+    base  = importr('base')
+    nlme  = importr('nlme')
 
     # read the input data
-    input_csv='brain.csv'
-    mask_file='mask.mnc'
+    input_csv='longitudinal_roi.csv'
+    mask_file='mask_roi.mnc'
     
     # load CSV file
     data=load_csv(input_csv)
-    # data['jacobian'] now contains file names
-    # and data['cohort'] - group
+    # columns:
+    # Subject,Visit,Filename,Age,Gender,Scale
+    # 
     
     # setup R objects for performing linear modelling
-    cohort = ro.FactorVector(data['cohort'])
+    Subject = ro.FactorVector(data['Subject'])
+    Visit   = ro.FactorVector(data['Visit'])
+    Age     = ro.FloatVector(data['Age'])
+    Gender  = ro.FactorVector(data['Gender'])
+    Scale   = ro.FloatVector(data['Scale'])
     
     inp=pyezminc.parallel_input_iterator()
     out=pyezminc.parallel_output_iterator()
 
-    inp.open(data['jacobian'],mask_file )
-    out.open(["output_slope.mnc","output_std_error.mnc","output_t_stat.mnc","output_p_val.mnc"],mask_file)
+    
+    # allocate R formula, saves time for interpreter
+    fixed_effects = ro.Formula('Jacobian ~ I(Age^2) + Gender:I(Age^2) + Age + Gender:Age + Gender')
+    random_effects = ro.Formula('~1|Subject')
+    
+    inp.open(data['Filename'],mask_file )
+    out.open(["output_roi_Intercept.mnc","output_roi_Age2.mnc","output_roi_Gender_Age2.mnc","output_roi_Age.mnc","output_roi_Gender_Age.mnc","output_roi_Gender.mnc",
+    "output_roi_Intercept_t.mnc","output_roi_Age2_t.mnc","output_roi_Gender_Age2_t.mnc","output_roi_Age_t.mnc","output_roi_Gender_Age_t.mnc","output_roi_Gender_t.mnc"
+    ],mask_file)
 
     # allocate space for input
     jacobian=np.zeros(shape=[inp.dim()],dtype=np.float64,order='C')
 
     # allocate space for output
+    zero=np.zeros(shape=[out.dim()],dtype=np.float64,order='C')
     result=np.zeros(shape=[out.dim()],dtype=np.float64,order='C')
 
-    # allocate R formula, saves time for interpreter
-    fmla = ro.Formula('jacobian ~ cohort')
-
-    # assign cohort variable - it stays the same 
-    fmla.environment["cohort"] = cohort
+    
+    # assign ariables - they stays the same 
+    ro.globalenv["Subject"] = Subject
+    ro.globalenv["Visit"]  = Visit
+    ro.globalenv["Age"]    = Age
+    ro.globalenv["Gender"] = Gender
+    #fmla.environment["Scale"] = Scale
 
     # start iteration, not really needed
     inp.begin()
@@ -73,34 +89,36 @@ if __name__ == "__main__":
     try:
         while True:
 
+
             if inp.value_mask():
-                jacobian=inp.value(jacobian)
+                Jacobian=ro.FloatVector(inp.value(jacobian))
 
                 # update jacobian vairable
-                fmla.environment["jacobian"] = jacobian
+                fixed_effects.environment["Jacobian"] = Jacobian
                 
-                # run linear model
-                l=stats.lm(fmla)
-                
-                # extract coeffecients
-                s = base.summary(l).rx2('coefficients')
-
-                result[0]=s.rx(2,1)[0] # this is estimate
-                result[1]=s.rx(2,2)[0] # this is standard error
-                result[2]=s.rx(2,3)[0] # this is t-value
-                result[3]=s.rx(2,4)[0] # this is p-value
+               
+                try:
+                    # run linear model
+                    l = base.summary(nlme.lme(fixed_effects,random=random_effects,method="ML"))
+                    # extract coeffecients
+                    result[0:6] = l.rx2('coefficients').rx2('fixed')[:]
+                    result[6:12] = l.rx2('tTable').rx2(True,4)[:]
+                except RRuntimeError:
+                    # probably model didn't converge
+                    result=zero
             else:
                 # we are passing-by voxels outside of the mask,
                 # assign default value
-                result[0]=result[1]=result[2]=0
-                result[3]=1.0
-
+                result=zero
             # set the value
             out.value(result)
             
             # move to the next voxel
             inp.next()
             out.next()
+            # display something on the screen....
+            sys.stdout.write(".")
+            sys.stdout.flush()
 
     except StopIteration:
         pass
