@@ -6,8 +6,7 @@ import os
 import pyezminc
 import numpy as np
 
-#DATA_PATH = '/opt/minc/share/icbm152_model_09c'
-DATA_PATH = '/extra/mni'
+DATA_PATH = '/opt/minc/share/icbm152_model_09c'
 
 if __name__ == "__main__":
     

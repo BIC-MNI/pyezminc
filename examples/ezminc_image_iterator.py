@@ -10,10 +10,10 @@ import pyezminc
 DATA_PATH = '/opt/minc/share/icbm152_model_09c'
 
 
-
 if __name__ == "__main__":
     
     sum1=0.0
+    print "Using an iterator to read the image"
     for i in pyezminc.input_iterator_real(os.path.join(DATA_PATH, 'mni_icbm152_t1_tal_nlin_sym_09c.mnc')):
         sum1+=i
     print "sum of all voxels in T1w template={}".format(sum1)

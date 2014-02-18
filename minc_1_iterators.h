@@ -78,27 +78,28 @@ namespace minc
     minc_output_iterator_base():
       _rw(NULL),_last(false),_count(0)
     {}
-      
+
     minc_output_iterator_base(const minc_output_iterator_base& a):
     _rw(a._rw),_cur(a._cur),_last(a._last),_count(a._count)
     {}
-      
+
     minc_output_iterator_base(minc_1_writer& rw)
     {
       attach(rw);
     }
-    
+
     const std::vector<long>& cur(void) const
     {
       return _cur;
     }
-      
+
     virtual void attach(minc_1_writer& rw)
     {
       _rw=&rw;
       _last=false;
       _count=0;
     }
+    
     virtual bool next(void)=0;
     virtual void begin(void)=0;
     
@@ -123,8 +124,9 @@ namespace minc
       //TODO: init buffer
     }
     
-    minc_input_iterator(minc_1_reader& rw):minc_input_iterator_base(rw)
+    minc_input_iterator(minc_1_reader& rw)
     {
+      attach(rw);
     }
     
     minc_input_iterator()
@@ -200,8 +202,9 @@ namespace minc
     {
     }
     
-    minc_output_iterator(minc_1_writer& rw):minc_output_iterator_base(rw)
+    minc_output_iterator(minc_1_writer& rw)
     {
+      attach(rw);
     }
     
     minc_output_iterator()

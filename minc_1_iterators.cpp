@@ -14,9 +14,9 @@ namespace minc
       mask.open(mask_file.c_str());
       mask.setup_read_byte();
       mask_it.attach(mask);
-      
+
       _have_mask=true;
-      
+
       mask_it.begin();
     }
 

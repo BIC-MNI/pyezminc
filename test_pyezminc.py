@@ -140,7 +140,7 @@ class TestIterator(unittest.TestCase):
         for i in it:
             sum+=i
         print "sum={}".format(sum)
-        self.assertEqual(sum,252574364.9)
+        self.assertEqual(sum,)
 
 class TestLabel(unittest.TestCase):
 
