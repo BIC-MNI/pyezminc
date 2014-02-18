@@ -474,7 +474,10 @@ cdef class parallel_input_iterator:
     def last(self):
         return self._it.last()
 
-    def value(self,np.ndarray ret):
+    def value(self,np.ndarray ret=None):
+        if ret is None:
+            ret=np.ndarray([self._it.dim()],dtype=np.float64,order='C')
+
         self._it.value(<double*>ret.data)
         return ret
     

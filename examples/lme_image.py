@@ -75,10 +75,10 @@ if __name__ == "__main__":
 
     
     # assign ariables - they stays the same 
-    ro.globalenv["Subject"] = Subject
-    ro.globalenv["Visit"]  = Visit
-    ro.globalenv["Age"]    = Age
-    ro.globalenv["Gender"] = Gender
+    random_effects.environment["Subject"] = Subject
+    fixed_effects.environment["Visit"]  = Visit
+    fixed_effects.environment["Age"]    = Age
+    fixed_effects.environment["Gender"] = Gender
     #fmla.environment["Scale"] = Scale
 
     # start iteration, not really needed
@@ -91,11 +91,10 @@ if __name__ == "__main__":
 
 
             if inp.value_mask():
-                Jacobian=ro.FloatVector(inp.value(jacobian))
+                Jacobian=ro.FloatVector(inp.value())
 
                 # update jacobian vairable
-                ro.globalenv["Jacobian"] = Jacobian
-                
+                fixed_effects.environment["Jacobian"] = Jacobian
                
                 try:
                     # run linear model

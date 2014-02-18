@@ -55,35 +55,36 @@ Age     = ro.FloatVector(data['Age'])
 Gender  = ro.FactorVector(data['Gender'])
 
 # assign ariables - they stays the same 
-ro.globalenv["Subject"] = Subject
-ro.globalenv["Visit"]  = Visit
-ro.globalenv["Age"]    = Age
-ro.globalenv["Gender"] = Gender
 
 # allocate R formula, saves time for interpreter
-fixed_effects = ro.Formula('Jacobian ~ I(Age^2) + Gender:I(Age^2) + Age + Gender:Age + Gender')
 random_effects = ro.Formula('~1|Subject')
 
 zero=np.zeros(shape=[12],dtype=np.float64,order='C')
 
 def run_nlme(jacobian):
-    Jacobian=ro.FloatVector(jacobian)
+    fixed_effects = ro.Formula('Jacobian ~ I(Age^2) + Gender:I(Age^2) + Age + Gender:Age + Gender')
 
+    fixed_effects.environment["Subject"] = Subject
+    fixed_effects.environment["Visit"]   = Visit
+    fixed_effects.environment["Age"]     = Age
+    fixed_effects.environment["Gender"]  = Gender
+    
     # update jacobian variable
-    ro.globalenv["Jacobian"] = Jacobian
+    fixed_effects.environment["Jacobian"] = ro.FloatVector(jacobian)
 
     # allocate space for output
     result=np.zeros(shape=[12],dtype=np.float64,order='C')
-    
+
     try:
         # run linear model
         l = base.summary(nlme.lme(fixed_effects,random=random_effects,method="ML"))
+
         # extract coeffecients
-        result[0:6] = l.rx2('coefficients').rx2('fixed')[:]
+        result[0:6]  = l.rx2('coefficients').rx2('fixed')[:]
         result[6:12] = l.rx2('tTable').rx2(True,4)[:]
     except RRuntimeError:
         # probably model didn't converge
-        result=zero
+        pass
 
     return result
 
@@ -96,7 +97,7 @@ if __name__ == "__main__":
     inp.open(data['Filename'],mask_file )
     
     # allocate space for input
-    jacobian=np.zeros(shape=[inp.dim()],dtype=np.float64,order='C')
+    
 
     #fmla.environment["Scale"] = Scale
 
@@ -111,8 +112,9 @@ if __name__ == "__main__":
         while True:
             if inp.value_mask():
                 masked.append(True)
-                inp.value(jacobian)
-                results.append(futures.submit(run_nlme,jacobian))
+                #jacobian=np.zeros(shape=[inp.dim()],dtype=np.float64,order='C')
+                
+                results.append(futures.submit(run_nlme,inp.value()))
             else:
                 # we are passing-by voxels outside of the mask,
                 # assign default value
@@ -145,7 +147,7 @@ if __name__ == "__main__":
             out.next()
     except StopIteration:
         pass
-
+    print "k={}".format(k)
     # free up memory, not really needed 
     del out
 
