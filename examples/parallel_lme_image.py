@@ -147,7 +147,6 @@ if __name__ == "__main__":
             out.next()
     except StopIteration:
         pass
-    print "k={}".format(k)
     # free up memory, not really needed 
     del out
 

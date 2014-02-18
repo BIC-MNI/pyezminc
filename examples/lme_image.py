@@ -89,13 +89,13 @@ if __name__ == "__main__":
     try:
         while True:
 
-
+            result=np.zeros(shape=[out.dim()],dtype=np.float64,order='C')
             if inp.value_mask():
                 Jacobian=ro.FloatVector(inp.value())
 
                 # update jacobian vairable
                 fixed_effects.environment["Jacobian"] = Jacobian
-               
+                
                 try:
                     # run linear model
                     l = base.summary(nlme.lme(fixed_effects,random=random_effects,method="ML"))
@@ -104,12 +104,7 @@ if __name__ == "__main__":
                     result[6:12] = l.rx2('tTable').rx2(True,4)[:]
                 except RRuntimeError:
                     # probably model didn't converge
-                    result=zero
-            else:
-                # we are passing-by voxels outside of the mask,
-                # assign default value
-                result=zero
-            # set the value
+                    pass
             out.value(result)
             
             # move to the next voxel
