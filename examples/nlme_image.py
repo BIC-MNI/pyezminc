@@ -94,7 +94,7 @@ if __name__ == "__main__":
                 Jacobian=ro.FloatVector(inp.value(jacobian))
 
                 # update jacobian vairable
-                fixed_effects.environment["Jacobian"] = Jacobian
+                ro.globalenv["Jacobian"] = Jacobian
                 
                
                 try:
