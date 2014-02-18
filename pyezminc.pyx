@@ -474,17 +474,23 @@ cdef class parallel_input_iterator:
     def last(self):
         return self._it.last()
 
-    def value(self,np.ndarray ret):#[np.float64_t, ndim=1]
-        #cdef np.ndarray ret = np.ndarray(shape=[self._it.dim()], dtype=np.float64,order='C')
-#        if ret is None:
-#            ret = np.ndarray(shape=[self._it.dim()], dtype=np.float64,order='C')
-
+    def value(self,np.ndarray ret):
         self._it.value(<double*>ret.data)
         return ret
+    
+    def value_mask(self):
+        return self._it.mask_value()
+    
+#    def py_value(self,vector[double] ret):
+#        self._it.value(ret)
+#        return ret
 
     def open(self,vector[string] output,string mask=""):
         self._it.open(output,mask)
 
+
+    def dim(self):
+        return self._it.dim()
 
 cdef class parallel_output_iterator:
     cdef minc_parallel_output_iterator _it
@@ -504,16 +510,14 @@ cdef class parallel_output_iterator:
     def last(self):
         return self._it.last()
 
-    def value(self,np.ndarray v):#[np.float64_t, ndim=1]
-#        cdef np.ndarray v1
-        # TODO: check the dimensions and data type ?
-      
-        #if not v.flags['C_CONTIGUOUS']:
-            ## Array is not contiguous, need to make contiguous copy
-            #v1=v.data.copy(order='C')
-            #self._it.value(<double*>v1.data)
-        #else:
+    def value(self,np.ndarray v):
         self._it.value(<double*>v.data)
+        
+    def dim(self):
+        return self._it.dim()
+        
+#    def py_value(self,vector[double] ret):
+#        self._it.value(ret)
 
     def open(self,vector[string] output,string ref):
         cdef minc_1_reader rdr

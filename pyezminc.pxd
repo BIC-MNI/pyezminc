@@ -161,25 +161,25 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         void value(const T&)
 
     cdef cppclass minc_parallel_input_iterator:
-        bool next() except +
-        bool last() except +
-        void begin() except +
+        bool next()
+        bool last()
+        void begin()
         bool have_mask()
         bool mask_value()
         void value(vector[double]& v)
         void value(double* v)
-        void open(const vector[string] &in_files,const string & mask_file)
-        void open(const vector[string] &in_files)
+        void open(const vector[string] &in_files,const string & mask_file)  except +
+        void open(const vector[string] &in_files)  except +
         size_t dim()
 
     cdef cppclass minc_parallel_output_iterator:
-        bool next() except +
-        bool last() except +
-        void begin() except +
+        bool next()
+        bool last()
+        void begin()
         void value(const vector[double]& v)
         void value(const double* v)
-        void open(const vector[string] &out_files,const minc_info & output_info,const char* history)
-        void open(const vector[string] &out_files,const minc_info & output_info)
+        void open(const vector[string] &out_files,const minc_info & output_info,const char* history)  except +
+        void open(const vector[string] &out_files,const minc_info & output_info) except +
         size_t dim()
 
     cdef void load_standard_volume(minc_1_reader& rw, double *vol) except +
