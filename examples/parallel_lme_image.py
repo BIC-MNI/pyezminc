@@ -31,14 +31,16 @@ def load_csv(csv_file):
     return data
 
 
-# define R objects globally, so that we don't have to transfer them between instances
+# setup automatic conversion for numpy to Rpy
 ro.conversion.py2ri = numpy2ri
+
 # import R objects
+# define R objects globally, so that we don't have to transfer them between instances
 stats = importr('stats')
 base  = importr('base')
 nlme  = importr('nlme')
 
-# read the input data
+# define input data
 input_csv='longitudinal_roi.csv'
 mask_file='mask_roi.mnc'
 
@@ -54,16 +56,17 @@ Visit   = ro.FactorVector(data['Visit'])
 Age     = ro.FloatVector(data['Age'])
 Gender  = ro.FactorVector(data['Gender'])
 
-# assign ariables - they stays the same 
-
-# allocate R formula, saves time for interpreter
+# allocate R formula, saves a little time for interpreter
 random_effects = ro.Formula('~1|Subject')
 
 zero=np.zeros(shape=[12],dtype=np.float64,order='C')
 
+# this function will be executed in parallel
 def run_nlme(jacobian):
+    # this object have to be defined within the function to avoid funny results due to concurrent execution
     fixed_effects = ro.Formula('Jacobian ~ I(Age^2) + Gender:I(Age^2) + Age + Gender:Age + Gender')
 
+    # assign variables 
     fixed_effects.environment["Subject"] = Subject
     fixed_effects.environment["Visit"]   = Visit
     fixed_effects.environment["Age"]     = Age
@@ -76,7 +79,7 @@ def run_nlme(jacobian):
     result=np.zeros(shape=[12],dtype=np.float64,order='C')
 
     try:
-        # run linear model
+        # run linear mixed-effect model
         l = base.summary(nlme.lme(fixed_effects,random=random_effects,method="ML"))
 
         # extract coeffecients
@@ -91,17 +94,10 @@ def run_nlme(jacobian):
 
 if __name__ == "__main__":
     
-    # setup automatic conversion for numpy
-
     inp=pyezminc.parallel_input_iterator()
     
     inp.open(data['Filename'],mask_file )
     
-    # allocate space for input
-    
-
-    #fmla.environment["Scale"] = Scale
-
     # start iteration, not really needed
     inp.begin()
 
@@ -113,8 +109,8 @@ if __name__ == "__main__":
         while True:
             if inp.value_mask():
                 masked.append(True)
-                #jacobian=np.zeros(shape=[inp.dim()],dtype=np.float64,order='C')
                 
+                # submit job for execution
                 results.append(futures.submit(run_nlme,inp.value()))
             else:
                 # we are passing-by voxels outside of the mask,
@@ -125,8 +121,10 @@ if __name__ == "__main__":
     except StopIteration:
         pass
     
+    # delete input iterator, free memory, close files
     del inp
-    
+
+    # setup output iterator
     out=pyezminc.parallel_output_iterator()
     
     out.open(["output_Intercept.mnc","output_Age2.mnc","output_Gender_Age2.mnc","output_Age.mnc","output_Gender_Age.mnc","output_Gender.mnc",
@@ -137,9 +135,10 @@ if __name__ == "__main__":
     out.begin()
     k=0
     try:
+        # get results only for voxels which were within the brain mask
         for i in masked:
             if i :
-                # get result of processing
+                # get result of processing (will wait for them to become available)
                 out.value(results[k].result())
                 k+=1
             else:
@@ -148,7 +147,8 @@ if __name__ == "__main__":
             out.next()
     except StopIteration:
         pass
-    # free up memory, not really needed 
+    
+    # free up memory, close file not really needed here
     del out
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
