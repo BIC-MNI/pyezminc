@@ -81,7 +81,8 @@ def run_nlme(jacobian):
 
         # extract coeffecients
         result[0:6]  = l.rx2('coefficients').rx2('fixed')[:]
-        result[6:12] = l.rx2('tTable').rx2(True,4)[:]
+        # extract t-values
+        result[6:12] = l.rx2('tTable').rx(True,4)[:]
     except RRuntimeError:
         # probably model didn't converge
         pass

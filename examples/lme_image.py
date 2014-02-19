@@ -100,8 +100,14 @@ if __name__ == "__main__":
                     # run linear model
                     l = base.summary(nlme.lme(fixed_effects,random=random_effects,method="ML"))
                     # extract coeffecients
-                    result[0:6] = l.rx2('coefficients').rx2('fixed')[:]
-                    result[6:12] = l.rx2('tTable').rx2(True,4)[:]
+                    result[0:6]  = l.rx2('coefficients').rx2('fixed')[:]
+                    
+                    # extract t-values
+                    result[6:12] = l.rx2('tTable').rx(True,4)[:]
+                    
+                    print l.rx2('tTable').rx(True,4)
+                    print result
+                    exit(1)
                 except RRuntimeError:
                     # probably model didn't converge
                     pass
