@@ -105,9 +105,6 @@ if __name__ == "__main__":
                     # extract t-values
                     result[6:12] = l.rx2('tTable').rx(True,4)[:]
                     
-                    print l.rx2('tTable').rx(True,4)
-                    print result
-                    exit(1)
                 except RRuntimeError:
                     # probably model didn't converge
                     pass
