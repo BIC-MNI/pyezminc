@@ -88,6 +88,8 @@ namespace minc
     
     size_t _count;
     size_t _total;
+    size_t _progress;
+    
   public:
     minc_output_iterator_base():
       _rw(NULL),_last(false),_count(0),

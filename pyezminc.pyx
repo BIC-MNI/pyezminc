@@ -402,6 +402,10 @@ cdef class output_iterator_real(object):
             del self._it
         if self.wrtptr != NULL:
             del self.wrtptr
+    
+    def progress(self):
+        return self._it.progress()
+
 
 
 cdef class output_iterator_int(object):
@@ -455,6 +459,8 @@ cdef class output_iterator_int(object):
         if self.wrtptr != NULL:
             del self.wrtptr
 
+    def progress(self):
+        return self._it.progress()
 
 cdef class parallel_input_iterator:
     cdef minc_parallel_input_iterator _it
@@ -495,6 +501,10 @@ cdef class parallel_input_iterator:
     def dim(self):
         return self._it.dim()
 
+    def progress(self):
+        return self._it.progress()
+
+
 cdef class parallel_output_iterator:
     cdef minc_parallel_output_iterator _it
     
@@ -526,5 +536,8 @@ cdef class parallel_output_iterator:
         cdef minc_1_reader rdr
         rdr.open(<char*?>ref.c_str(),True,True)
         self._it.open(output,rdr.info())
+
+    def progress(self):
+        return self._it.progress()
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
