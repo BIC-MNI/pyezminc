@@ -42,7 +42,7 @@ namespace minc
       _rw=&rw;
       _last=false;
       _count=0;
-      _total=0;
+      _total=1;
       _progress=0;
     }
     
@@ -85,14 +85,18 @@ namespace minc
     mutable minc_1_writer* _rw;
     std::vector<long> _cur;
     bool _last;
+    
     size_t _count;
+    size_t _total;
   public:
     minc_output_iterator_base():
-      _rw(NULL),_last(false),_count(0)
+      _rw(NULL),_last(false),_count(0),
+      _total(1),_progress(0)
     {}
 
     minc_output_iterator_base(const minc_output_iterator_base& a):
-    _rw(a._rw),_cur(a._cur),_last(a._last),_count(a._count)
+    _rw(a._rw),_cur(a._cur),_last(a._last),_count(a._count),
+    _total(a._total),_progress(a._progress)
     {}
 
     minc_output_iterator_base(minc_1_writer& rw)
@@ -110,6 +114,8 @@ namespace minc
       _rw=&rw;
       _last=false;
       _count=0;
+      _total=1;
+      _progress=0;
     }
     
     virtual bool next(void)=0;
@@ -122,6 +128,11 @@ namespace minc
     
     virtual ~minc_output_iterator_base()
     {}
+      
+    double progress(void) const
+    {
+      return 100.0*_progress/_total;
+    }
       
   };
   
