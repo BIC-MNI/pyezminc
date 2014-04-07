@@ -94,19 +94,35 @@ def run_nlme(jacobian):
 
 if __name__ == "__main__":
     
+    max_jobs_queue=1000
+    
     inp=pyezminc.parallel_input_iterator()
     
     inp.open(data['Filename'],mask_file )
-    
-    # start iteration, not really needed
-    inp.begin()
+
+
+    # setup output iterator
+    out=pyezminc.parallel_output_iterator()
+
+    out.open(["output_Intercept.mnc","output_Age2.mnc","output_Gender_Age2.mnc","output_Age.mnc","output_Gender_Age.mnc","output_Gender.mnc",
+    "output_Intercept_t.mnc","output_Age2_t.mnc","output_Gender_Age2_t.mnc","output_Age_t.mnc","output_Gender_Age_t.mnc","output_Gender_t.mnc"
+    ],mask_file)
 
     l=None
+
+    # start iterators, not really needed
+    inp.begin()
+    out.begin()
+
     masked=[]
     results=[]
-    # submit executions
     try:
         while True:
+            queued=0
+            
+            masked=[]
+            results=[]
+            
             if inp.value_mask():
                 masked.append(True)
                 
@@ -120,20 +136,11 @@ if __name__ == "__main__":
             inp.next()
     except StopIteration:
         pass
+    finally: # finish waiting for outstanding tasks
     
     # delete input iterator, free memory, close files
     del inp
 
-    # setup output iterator
-    out=pyezminc.parallel_output_iterator()
-    
-    out.open(["output_Intercept.mnc","output_Age2.mnc","output_Gender_Age2.mnc","output_Age.mnc","output_Gender_Age.mnc","output_Gender.mnc",
-    "output_Intercept_t.mnc","output_Age2_t.mnc","output_Gender_Age2_t.mnc","output_Age_t.mnc","output_Gender_Age_t.mnc","output_Gender_t.mnc"
-    ],mask_file)
-    
-    # collect results
-    out.begin()
-    k=0
     try:
         # get results only for voxels which were within the brain mask
         for i in masked:
