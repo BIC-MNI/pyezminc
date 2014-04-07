@@ -27,6 +27,9 @@ namespace minc
     bool _last;
     size_t _count;
     
+    size_t _total;
+    size_t _progress;
+    
   public:
     
     const std::vector<long>& cur(void) const
@@ -39,6 +42,8 @@ namespace minc
       _rw=&rw;
       _last=false;
       _count=0;
+      _total=0;
+      _progress=0;
     }
     
     virtual bool next(void)=0;
@@ -50,11 +55,13 @@ namespace minc
     }
     
     minc_input_iterator_base(): 
-      _rw(NULL),_last(false),_count(0)
+      _rw(NULL),_last(false),_count(0),
+      _total(1),_progress(0)
     {}
       
     minc_input_iterator_base(const minc_input_iterator_base& a): 
-      _rw(a._rw),_cur(a._cur),_last(a._last),_count(a._count)
+      _rw(a._rw),_cur(a._cur),_last(a._last),_count(a._count),
+      _total(a._total),_progress(a._progress)
     {}
       
     minc_input_iterator_base(minc_1_reader& rw)
@@ -64,6 +71,11 @@ namespace minc
       
     virtual ~minc_input_iterator_base()
     {}
+      
+    double progress(void) const
+    {
+      return 100.0*_progress/_total;
+    }
     
   };
 
@@ -139,6 +151,11 @@ namespace minc
 
       _buf.resize(_rw->slice_len());
       _cur.resize(MAX_VAR_DIMS,0);
+      
+      _total=1;
+      
+      for(int i=0;i<_rw->dim_no();i++)
+            _total*=_rw->dim(i).length;
     }
     
     
@@ -146,6 +163,8 @@ namespace minc
     {
       if(_last) return false;
       _count++;
+      _progress++;
+      
       for(size_t i=static_cast<size_t>(_rw->dim_no()-1);
           i>static_cast<size_t>(_rw->dim_no()-_rw->slice_dimensions()-1);i--)
       {
@@ -181,6 +200,8 @@ namespace minc
     void begin(void)
     {
       _count=0;
+      _progress=0;
+
       _rw->begin();
       _rw->read(&_buf[0]);
       _cur=_rw->current_slice();
@@ -216,6 +237,10 @@ namespace minc
       minc_output_iterator_base::attach(rw);
       _buf.resize(_rw->slice_len());
       _cur.resize(MAX_VAR_DIMS,0);
+      _total=1;
+      
+      for(int i=0;i<_rw->dim_no();i++)
+            _total*=_rw->dim(i).length;
     }  
     
     ~minc_output_iterator()
@@ -228,6 +253,8 @@ namespace minc
     {
       if(_last) return false;
       _count++;
+      _progress++;
+      
       for(int i=_rw->dim_no()-1;i>(_rw->dim_no()-_rw->slice_dimensions()-1);i--)
       {
         _cur[i]++;
@@ -261,6 +288,7 @@ namespace minc
     void begin(void)
     {
       _count=0;
+      _progress=0;
       _rw->begin();
       _cur=_rw->current_slice();
     }
@@ -307,6 +335,11 @@ namespace minc
     {
       return in.size();
     }
+    
+    double progress(void) const
+    {
+      return in[0].progress();
+    }
   };
 
   class minc_parallel_output_iterator
@@ -328,6 +361,10 @@ namespace minc
     size_t dim(void) const
     {
       return out.size();
+    }
+    double progress(void) const
+    {
+      return out[0].progress();
     }
     
   };
