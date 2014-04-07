@@ -116,6 +116,7 @@ if __name__ == "__main__":
 
     masked=[]
     results=[]
+    
     try:
         while True:
             queued=0
@@ -123,27 +124,34 @@ if __name__ == "__main__":
             masked=[]
             results=[]
             
-            if inp.value_mask():
-                masked.append(True)
+            while len(results)<max_jobs_queue:
+                if inp.value_mask():
+                    masked.append(True)
                 
-                # submit job for execution
-                results.append(futures.submit(run_nlme,inp.value()))
-            else:
-                # we are passing-by voxels outside of the mask,
-                # assign default value
-                masked.append(False)
-            # move to the next voxel
-            inp.next()
+                    # submit job for execution
+                    results.append(futures.submit(run_nlme,inp.value()))
+                else:
+                    # we are passing-by voxels outside of the mask,
+                    # assign default value
+                    masked.append(False)
+                # move to the next voxel
+                inp.next()
+            # now let's get results
+            for i in masked:
+                k=0
+                if i :
+                    # get result of processing (will wait for them to become available)
+                    out.value(results[k].result())
+                    k+=1
+                else:
+                    # it was masked away
+                    out.value(zero)
+                out.next()
     except StopIteration:
         pass
     finally: # finish waiting for outstanding tasks
-    
-    # delete input iterator, free memory, close files
-    del inp
-
-    try:
-        # get results only for voxels which were within the brain mask
         for i in masked:
+            k=0
             if i :
                 # get result of processing (will wait for them to become available)
                 out.value(results[k].result())
@@ -152,10 +160,10 @@ if __name__ == "__main__":
                 # it was masked away
                 out.value(zero)
             out.next()
-    except StopIteration:
-        pass
-    
-    # free up memory, close file not really needed here
+
+    # delete input iterator, free memory, close files, usually done automatically
+    del inp
+    # free up memory, close file not really needed here, usually done automatically
     del out
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
