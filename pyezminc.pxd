@@ -148,7 +148,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         bool last() except +
         void begin() except +
         const T& value()
-	double progress()
+        double progress()
 
     cdef cppclass minc_output_iterator[T]:
         vector[long] cur() const
