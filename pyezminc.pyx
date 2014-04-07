@@ -402,7 +402,7 @@ cdef class output_iterator_real(object):
             del self._it
         if self.wrtptr != NULL:
             del self.wrtptr
-    
+
     def progress(self):
         return self._it.progress()
 
@@ -461,6 +461,7 @@ cdef class output_iterator_int(object):
 
     def progress(self):
         return self._it.progress()
+
 
 cdef class parallel_input_iterator:
     cdef minc_parallel_input_iterator _it
