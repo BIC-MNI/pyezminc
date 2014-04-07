@@ -42,12 +42,12 @@ nlme  = importr('nlme')
 
 #<<<<<<< Updated upstream
 # define input data
-#input_csv='longitudinal_roi.csv'
-#mask_file='mask_roi.mnc'
+input_csv='longitudinal_roi.csv'
+mask_file='mask_roi.mnc'
 #=======
 # read the input data
-input_csv='longitudinal.csv'
-mask_file='mask.mnc'
+#input_csv='longitudinal.csv'
+#mask_file='mask.mnc'
 #>>>>>>> Stashed changes
 
 # load CSV file
@@ -95,12 +95,12 @@ def run_nlme(jacobian):
     except RRuntimeError:
         # probably model didn't converge
         pass
-
+        
     return result
 
 if __name__ == "__main__":
     
-    max_jobs_queue=100
+    max_jobs_in_queue=400
     
     inp=pyezminc.parallel_input_iterator()
     
@@ -125,15 +125,12 @@ if __name__ == "__main__":
     
     try:
         while True:
-            queued=0
-            
             masked=[]
             results=[]
             
-            while len(results)<max_jobs_queue:
+            while len(results)<max_jobs_in_queue:
                 if inp.value_mask():
                     masked.append(True)
-                
                     # submit job for execution
                     results.append(futures.submit(run_nlme,inp.value()))
                 else:
@@ -142,7 +139,9 @@ if __name__ == "__main__":
                     masked.append(False)
                 # move to the next voxel
                 inp.next()
-            print "*"
+            sys.stdout.write( "{:5.2f}%\t".format(inp.progress()) )
+            sys.stdout.flush( )
+            
             # now let's get results
             for i in masked:
                 k=0
@@ -157,16 +156,21 @@ if __name__ == "__main__":
     except StopIteration:
         pass
     finally: # finish waiting for outstanding tasks
-        for i in masked:
-            k=0
-            if i :
-                # get result of processing (will wait for them to become available)
-                out.value(results[k].result())
-                k+=1
-            else:
-                # it was masked away
-                out.value(zero)
-            out.next()
+    
+        try: # the output iterator will also raise StopIteration
+        
+            for i in masked:
+               k=0
+               if i :
+                   # get result of processing (will wait for them to become available)
+                   out.value(results[k].result())
+                   k+=1
+               else:
+                   # it was masked away
+                   out.value(zero)
+               out.next()
+        except StopIteration:
+            pass
 
     # delete input iterator, free memory, close files, usually done automatically
     del inp
