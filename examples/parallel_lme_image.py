@@ -40,9 +40,15 @@ stats = importr('stats')
 base  = importr('base')
 nlme  = importr('nlme')
 
+#<<<<<<< Updated upstream
 # define input data
-input_csv='longitudinal_roi.csv'
-mask_file='mask_roi.mnc'
+#input_csv='longitudinal_roi.csv'
+#mask_file='mask_roi.mnc'
+#=======
+# read the input data
+input_csv='longitudinal.csv'
+mask_file='mask.mnc'
+#>>>>>>> Stashed changes
 
 # load CSV file
 data=load_csv(input_csv)
@@ -94,7 +100,7 @@ def run_nlme(jacobian):
 
 if __name__ == "__main__":
     
-    max_jobs_queue=1000
+    max_jobs_queue=100
     
     inp=pyezminc.parallel_input_iterator()
     
@@ -136,6 +142,7 @@ if __name__ == "__main__":
                     masked.append(False)
                 # move to the next voxel
                 inp.next()
+            print "*"
             # now let's get results
             for i in masked:
                 k=0
