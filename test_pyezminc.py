@@ -31,7 +31,6 @@ import argparse
 import sys
 import numpy as np
 import numpy.ma as ma
-import sys
 import subprocess as sp
 import tempfile
 import shlex
