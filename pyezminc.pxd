@@ -114,6 +114,10 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_read_double() except +
         void setup_read_float() except +
         void setup_read_int() except +
+        void setup_read_uint() except +
+        void setup_read_short() except +
+        void setup_read_ushort() except +
+        void setup_read_byte() except +
         void open(const char *path, bool positive_directions, bool metadate_only, bool rw) except +
         void open(const char *path, bool positive_directions, bool metadate_only) except +
         void open(const char *path, bool positive_directions) except +
@@ -126,6 +130,10 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void setup_write_double() except +
         void setup_write_float() except +
         void setup_write_int() except +
+        void setup_write_short() except +
+        void setup_write_uint() except +
+        void setup_write_ushort() except +
+        void setup_write_byte() except +
         void open(const char *path, minc_1_reader imitate) except +
         void open(const char *path, minc_1_base imitate) except +
         void open(const char *path, char *imitate_file) except +
@@ -189,9 +197,17 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
     cdef void load_standard_volume(minc_1_reader& rw, double *vol) except +
     cdef void load_standard_volume(minc_1_reader& rw, float *vol) except +
     cdef void load_standard_volume(minc_1_reader& rw, int *vol) except +
+    cdef void load_standard_volume(minc_1_reader& rw, short *vol) except +
+    cdef void load_standard_volume(minc_1_reader& rw, unsigned int *vol) except +
+    cdef void load_standard_volume(minc_1_reader& rw, unsigned short *vol) except +
+    cdef void load_standard_volume(minc_1_reader& rw, unsigned char *vol) except +
 
     cdef void save_standard_volume(minc_1_writer& rw, double *vol) except +
     cdef void save_standard_volume(minc_1_writer& rw, float *vol) except +
     cdef void save_standard_volume(minc_1_writer& rw, int *vol) except +
+    cdef void save_standard_volume(minc_1_writer& rw, unsigned int *vol) except +
+    cdef void save_standard_volume(minc_1_writer& rw, short *vol) except +
+    cdef void save_standard_volume(minc_1_writer& rw, unsigned short *vol) except +
+    cdef void save_standard_volume(minc_1_writer& rw, unsigned char *vol) except +
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

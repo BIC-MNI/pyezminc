@@ -93,20 +93,38 @@ cdef class EZMincWrapper(object):
             raise Exception('Need a 3D minc file')
         if dtype == np.float32:
             self.wrtptr.setup_write_float()
-        elif dtype == np.int32:
-            self.wrtptr.setup_write_int()
-        elif dtype == np.float64:
+        elif dtype == np.float64 :
             self.wrtptr.setup_write_double()
+        elif dtype == np.int32 :
+            self.wrtptr.setup_write_int()
+        elif dtype == np.uint32 :
+            self.wrtptr.setup_write_uint()
+        elif dtype == np.uint16 :
+            self.wrtptr.setup_write_ushort()
+        elif dtype == np.int16 :
+            self.wrtptr.setup_write_short()
+        elif dtype == np.uint8 or dtype == np.int8 :
+            self.wrtptr.setup_write_byte()
         else:
             raise Exception('dtype not recognized', dtype)
 
     def __load_standard_volume(self, dtype=None):
         if dtype == np.float32:
             load_standard_volume(self.rdrptr[0], <float*>self.data.data)
-        elif dtype == np.int32:
-            load_standard_volume(self.rdrptr[0], <int*>self.data.data)
         elif dtype == np.float64:
             load_standard_volume(self.rdrptr[0], <double*>self.data.data)
+        elif dtype == np.int32:
+            load_standard_volume(self.rdrptr[0], <int*>self.data.data)
+        elif dtype == np.int16:
+            load_standard_volume(self.rdrptr[0], <short*>self.data.data)
+        elif dtype == np.int8:
+            load_standard_volume(self.rdrptr[0], <unsigned char*>self.data.data)
+        elif dtype == np.uint32:
+            load_standard_volume(self.rdrptr[0], <unsigned int*>self.data.data)
+        elif dtype == np.uint16:
+            load_standard_volume(self.rdrptr[0], <unsigned short*>self.data.data)
+        elif dtype == np.uint8:
+            load_standard_volume(self.rdrptr[0], <unsigned char*>self.data.data)
         else:
             raise Exception('dtype not recognized', dtype)
 
@@ -125,8 +143,18 @@ cdef class EZMincWrapper(object):
             save_standard_volume(self.wrtptr[0], <float*>contdata.data)
         elif dtype == np.int32:
             save_standard_volume(self.wrtptr[0], <int*>contdata.data)
+        elif dtype == np.uint32:
+            save_standard_volume(self.wrtptr[0], <unsigned int*>contdata.data)
         elif dtype == np.float64:
             save_standard_volume(self.wrtptr[0], <double*>contdata.data)
+        elif dtype == np.int16:
+            save_standard_volume(self.wrtptr[0], <int*>contdata.data)
+        elif dtype == np.uint16:
+            save_standard_volume(self.wrtptr[0], <unsigned int*>contdata.data)
+        elif dtype == np.int8:
+            save_standard_volume(self.wrtptr[0], <unsigned char*>contdata.data)
+        elif dtype == np.uint8:
+            save_standard_volume(self.wrtptr[0], <unsigned char*>contdata.data)
         else:
             raise Exception('dtype not recognized', dtype)
 
