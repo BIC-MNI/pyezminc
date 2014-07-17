@@ -27,6 +27,7 @@ import os
 import copy
 import re
 from datetime import datetime
+from time import gmtime, strftime
 from glob import glob
 import tempfile
 import string
@@ -91,7 +92,9 @@ def mincinfo(header, field):
         raise Exception("field not found in header: '{0}'".format(field))
     return h
 
-
+def format_history(argv):
+    stamp=strftime("%a %b %d %T %Y>>>", gmtime())
+    return stamp+(' '.join(argv))
 
 def display(images, label=None, imitate=None):
     ''' Display MINC images. The files are temporary saved to disk.
@@ -192,7 +195,7 @@ class Image(object):
             name = self.name
         self._save(name, *args, **kwargs)
 
-    def _save(self, name=None, imitate=None, *args, **kwargs):
+    def _save(self, name=None, imitate=None, history=None, *args, **kwargs):
         '''Save the image to a file.
 
         Args
@@ -213,7 +216,11 @@ class Image(object):
 
         if self.dtype != self.data.dtype:
             raise Exception("Cannot save image because non consistent dtype, '{0}' != '{1}'".format(self.dtype, self.data.dtype))
-        self.__wrapper.save(name, imitate=imitate, dtype=self.dtype)
+            
+        if history is not None:
+            self.history=history
+
+        self.__wrapper.save(name, imitate=imitate, dtype=self.dtype, history=self.history )
 
         if compress:
             gzip(name)
