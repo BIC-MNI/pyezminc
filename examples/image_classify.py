@@ -5,7 +5,7 @@ import string
 import os
 import argparse
 import pickle
-
+import sys
 # minc
 import minc
 
@@ -63,6 +63,8 @@ def parse_options():
     return options
 
 if __name__ == "__main__":
+    history=minc.format_history(sys.argv)
+    
     options = parse_options()
     
     
@@ -159,6 +161,6 @@ if __name__ == "__main__":
             if options.debug: print("Saving output...")
             
             out=minc.Label(data=out_cls)
-            out.save(name=options.output, imitate=options.image[0])
+            out.save(name=options.output, imitate=options.image[0],history=history)
     else:
         print "Error in arguments"

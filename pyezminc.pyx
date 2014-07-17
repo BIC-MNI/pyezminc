@@ -182,12 +182,14 @@ cdef class EZMincWrapper(object):
             self.__init_ndarray(dtype=dtype)
             self.loaded = True
     
-    def save(self, fname=None, imitate=None, dtype=None):
+    def save(self, fname=None, imitate=None, dtype=None, history=None):
         ''' Write a numpy array in a mincfile'''
         self.wrtptr.open(<char*?>fname, <char*?>imitate)
 # Works but then the rdrptr destructor fails
 #        else:
 #            self.wrtptr.open(<char*?>fname, <minc_1_base>self.rdrptr[0])
+        if history is not None:
+            self.wrtptr.append_history(<char*?>history)
         self.__setup_write(dtype=dtype)
         self.__save_standard_volume(dtype=dtype)
         #(<minc_1_base*>self.wrtptr).close()
