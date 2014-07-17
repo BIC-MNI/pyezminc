@@ -6,6 +6,7 @@ import os
 import argparse
 import pickle
 import sys
+import json
 # minc
 import minc
 
@@ -20,19 +21,16 @@ from sklearn import tree
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='Run tissue classifier ')
+                                 description='Perform error-correction learning and application')
     
-    parser.add_argument('prior',help="classification prior")
+    parser.add_argument('--train',help="Training library in json format")
     
-    parser.add_argument('image',help="Run classifier on a set of given images",nargs='+')
+    parser.add_argument('--input',help="Method to be corrected")
     
     parser.add_argument('--output',help="Output image")
     
     parser.add_argument('--mask', 
-                    help="Mask output results, set to 0 outside" )
-                    
-    parser.add_argument('--trainmask', 
-                    help="Training mask" )
+                    help="Region for correction" )
     
     parser.add_argument('--method',
                     choices=['SVM','lSVM','nuSVM','NN','RanForest','AdaBoost','tree'],
@@ -54,9 +52,12 @@ def parse_options():
     parser.add_argument('--random', type=int,
                     dest="random",
                     help='Provide random state if needed' )
-                    
+    
     parser.add_argument('--save',help='Save training results in a file')
+    
     parser.add_argument('--load',help='Load training results from a file')
+    
+    parser.add_argumetn('image',help='Input images',nargs='+')
     
     options = parser.parse_args()
     
@@ -67,84 +68,81 @@ if __name__ == "__main__":
     
     options = parse_options()
     
-    
-    #print(repr(options))
-    
-    # load prior and input image
-    if (options.prior is not None or options.load is not None) and options.image is not None:
-        if options.debug: print("Loading images...")
+    # load training images
+    if (options.train is not None or options.save is not None) :
         
-        images= [ minc.Image(i).data for i in options.image ]
-
-        if options.coord:
-            # add features dependant on coordinates
-            c=np.mgrid[0:images[0].shape[0] , 0:images[0].shape[1] , 0:images[0].shape[2]]
+        if options.debug: print("Loading training images...")
         
-            # use with center at 0 and 1.0 at the edge, could have used preprocessing 
-            images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
-            images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
-            images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
-
-        mask=None
-        if options.mask is not None:
-            mask=minc.Label(options.mask)
-        if options.debug: print("Done")
+        with open(options.train,'rb') as f:
+            train=json.load(f)
         
+        training_images=[]
+        training_err=[]
+        
+        #go over training samples
         clf=None
         
-        
-        if options.load is not None:
-            with open(options.load, 'rb') as f:
-                clf = pickle.load(f)
+        for inp in train:
+            
+            mask=minc.Label(inp[-3]).data
+            ground=minc.Label(inp[-2]).data
+            auto=minc.Label(inp[-1]).data
+            
+            images=[ minc.Image(i).data for i in inp[0:-3] ]
+
+            if options.coord:
+                # add features dependant on coordinates
+                c=np.mgrid[0:images[0].shape[0] , 0:images[0].shape[1] , 0:images[0].shape[2]]
+                # use with center at 0 and 1.0 at the edge, could have used preprocessing 
+                images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
+                images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
+                images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
+                
+            images.append(auto) # add auto labelling as a feature
+            # TODO add more features here
+
+            # extract only what's needed
+            training_images.append( [ i[mask>0] for i in images ] )
+            training_err.append( logical_xor(ground[mask>0],auto[mask>0] )
+
+        if options.debug: print("Done")
+
+        clf=None
+
+        training_X = np.hstack( tuple( np.column_stack( tuple( j for j in  training_images[i] ) for (i,k) in enumerate(training_images)   ) ) )
+        training_Y = np.ravel( np.concatenate( tuple(j for j in training_err ) ) )
+
+        if options.debug: print("Fitting...")
+
+        if options.method=="SVM":
+            clf = svm.SVC()
+        elif options.method=="nuSVM":
+            clf = svm.NuSVC()
+        elif options.method=='NN':
+            clf = neighbors.KNeighborsClassifier(options.n)
+        elif options.method=='RanForest':
+            clf = ensemble.RandomForestClassifier(n_estimators=options.n,random_state=options.random)
+        elif options.method=='AdaBoost':
+            clf = ensemble.AdaBoostClassifier(n_estimators=options.n,random_state=options.random)
+        elif options.method=='tree':
+            clf = tree.DecisionTreeClassifier(random_state=options.random)
         else:
-            prior=minc.Label(options.prior)
-            
-            labels=list(np.unique(prior.data))
-            counts=list(np.bincount(np.ravel(prior.data)))
+            clf = svm.LinearSVC()
         
-            if 0 in labels:
-                if options.debug: print("Label 0 will be discarded...")
-                labels.remove(0)
-                counts.pop(0) # assume it's first
-        
-            if options.debug: print("Available labels:{} counts: {} available images:{}".format(repr(labels),repr(counts),len(images)))
-        
-            if options.debug: print("Creating training dataset for classifier")
-        
-            if options.trainmask is not None:
-                trainmask = minc.Label(options.trainmask)
-            
-                training_X = np.column_stack( tuple( np.ravel( j[ np.logical_and(prior.data>0 , trainmask.data>0 ) ] ) for j in images  ) )
-                training_Y = np.ravel( prior.data[ np.logical_and(prior.data>0 , trainmask.data>0 ) ] )
-            else:
-                training_X = np.column_stack( tuple( np.ravel( j[ prior.data>0 ] ) for j in images  ) )
-                training_Y = np.ravel( prior.data[ prior.data>0 ] )
-        
-        
-            if options.debug: print("Fitting...")
-        
-            if options.method=="SVM":
-                clf = svm.SVC()
-            elif options.method=="nuSVM":
-                clf = svm.NuSVC()
-            elif options.method=='NN':
-                clf = neighbors.KNeighborsClassifier(options.n)
-            elif options.method=='RanForest':
-                clf = ensemble.RandomForestClassifier(n_estimators=options.n,random_state=options.random)
-            elif options.method=='AdaBoost':
-                clf = ensemble.AdaBoostClassifier(n_estimators=options.n,random_state=options.random)
-            elif options.method=='tree':
-                clf = tree.DecisionTreeClassifier(random_state=options.random)
-            else:
-                clf = svm.LinearSVC()
-        
-            clf.fit(training_X,training_Y)
+        clf.fit(training_X,training_Y)
         
         if options.debug: print(clf)
         
         if options.save is not None:
             with open(options.save,'wb') as f:
                 pickle.dump(clf, f)
+                
+    elif options.load is not None and options.input is not Nona and options.image is not None:
+        
+        with open(options.load, 'rb') as f:
+            clf = pickle.load(f)
+        
+        if options.debug: print(clf)
         
         if options.output is not None:
             if options.debug: print("Classifying...")
