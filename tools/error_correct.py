@@ -34,16 +34,17 @@ def prepare_features(options, images, auto_seg, mask):
         images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
         images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
     
+    # assume binary labelling here
     aa=auto_seg-0.5
     
     # add auto labelling as a feature
     images.append( aa ) 
     
     # add apparance and context images
-    for x in range(-1,2):
-        for y in range (-1,2):
-            for z in range(-1,2):
-                if x!=0 or y!=0 or z!=0:
+    for x in range(-1,2) :
+        for y in range (-1,2) :
+            for z in range(-1,2) :
+                if x!=0 or y!=0 or z!=0 :
                     images.append( np.roll( np.roll( np.roll( images[0], shift=x, axis=0 ), shift=y, axis=1), shift=z, axis=2 ) )
                     # add more context
                     images.append( np.roll( np.roll( np.roll( aa,        shift=x, axis=0 ), shift=y, axis=1), shift=z, axis=2 ) )
