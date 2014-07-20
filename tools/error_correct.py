@@ -242,8 +242,9 @@ if __name__ == "__main__":
         out_cls=None
         test_x=convert_image_list ( [ prepare_features( options, images, auto, mask ) ] ) 
         print test_x
-        #out_cls=np.copy( auto )
-        out_cls=np.zeros_like( auto )
+        
+        out_cls=np.copy( auto ) # use input data 
+        #out_cls=np.zeros_like( auto )
         
         if options.debug: print("Running classifier...")
         
