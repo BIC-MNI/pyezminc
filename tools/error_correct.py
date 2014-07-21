@@ -8,6 +8,7 @@ import pickle
 import cPickle 
 import sys
 import json
+import csv
 # minc
 import minc
 
@@ -79,6 +80,9 @@ def parse_options():
     
     parser.add_argument('--train',
                     help="Training library in json format")
+                    
+    parser.add_argument('--train_csv',
+                    help="Training library in CSV format")
     
     parser.add_argument('--input',
                     help="Automatic seg to be corrected")
@@ -148,12 +152,20 @@ if __name__ == "__main__":
     options = parse_options()
     
     # load training images
-    if (options.train is not None or options.save is not None) :
+    if ( (options.train is not None or \
+          options.train_csv is not None)  and \
+          options.save is not None) :
         
         if options.debug: print("Loading training images...")
         
-        with open(options.train,'rb') as f:
-            train=json.load(f)
+        train=None
+        
+        if options.train is not None:
+            with open(options.train,'rb') as f:
+                train=json.load(f)
+        else:
+            with open(options.train_csv,'rb') as f:
+                train=list(csv.reader(f))
         
         training_images=[]
         training_err=[]
