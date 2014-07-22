@@ -23,17 +23,22 @@ from sklearn import tree
 from sklearn import cross_validation
 from sklearn import preprocessing
 
-def prepare_features(options, images, auto_seg, mask):
+def prepare_features(options, images, coords, auto_seg, mask):
     
     #if options.coord:
     # add features dependant on coordinates
     c=np.mgrid[ 0:images[0].shape[0] , 0:images[0].shape[1] , 0:images[0].shape[2]]
     image_no=len(images)
     # use with center at 0 and 1.0 at the edge, could have used preprocessing 
-    if options.coord:
+    
+    if options.coord and coords is None:
         images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
         images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
         images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
+    else: # assume we have thre sets of coords
+        images.append( coords[0] )
+        images.append( coords[1] )
+        images.append( coords[2] )
     
     # assume binary labelling here
     aa=auto_seg-0.5
@@ -181,7 +186,7 @@ if __name__ == "__main__":
             
             images=[ preprocessing.scale(minc.Image(k).data) for k in inp[0:-3] ]
             
-            training_images.append( prepare_features( options, images, auto, mask ) )
+            training_images.append( prepare_features( options, images, None, auto, mask ) )
             #training_err.append( np.logical_xor( ground[mask>0], auto[mask>0] ) )
             training_err.append( ground[mask>0] ) # perform direct learning right now
                         
@@ -252,7 +257,7 @@ if __name__ == "__main__":
         auto=minc.Label( options.input ).data
         
         out_cls=None
-        test_x=convert_image_list ( [ prepare_features( options, images, auto, mask ) ] ) 
+        test_x=convert_image_list ( [ prepare_features( options, images, None, auto, mask ) ] ) 
         print test_x
         
         out_cls=np.copy( auto ) # use input data 
