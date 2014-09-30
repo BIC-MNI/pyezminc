@@ -42,12 +42,12 @@ nlme  = importr('nlme')
 
 #<<<<<<< Updated upstream
 # define input data
-input_csv='longitudinal_roi.csv'
-mask_file='mask_roi.mnc'
+#input_csv='longitudinal_roi.csv'
+#mask_file='mask_roi.mnc'
 #=======
 # read the input data
-#input_csv='longitudinal.csv'
-#mask_file='mask.mnc'
+input_csv='longitudinal.csv'
+mask_file='mask.mnc'
 #>>>>>>> Stashed changes
 
 # load CSV file

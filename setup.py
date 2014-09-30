@@ -26,7 +26,7 @@ import os
 #HOME = os.path.expanduser('~')
 
 # TODO: locate minc library
-MINCDIR = '/opt/minc_itk4'
+MINCDIR = '/opt/minc-1.9.90'
 
 # TODO: determine if volume_io is still availabel as separate library
 MINCLIBS= ['minc2','z','m', 'minc_io'] 
