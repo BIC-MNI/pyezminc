@@ -203,8 +203,6 @@ if __name__ == "__main__":
         clf=None
 
         training_X = convert_image_list( training_images )  
-        print training_X
-          #np.hstack( tuple( np.column_stack( tuple( j for j in  training_images[i] ) for (i,k) in enumerate(training_images)   ) ) )
         training_Y = np.ravel( np.concatenate( tuple(j for j in training_err ) ) )
 
         if options.debug: print("Fitting...")
