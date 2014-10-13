@@ -24,6 +24,7 @@ from sklearn import cross_validation
 from sklearn import preprocessing
 
 def prepare_features(options, images, coords, auto_seg, mask):
+    '''Convert list of input imates into numpy array to be used as input to classifier'''
     
     #if options.coord:
     # add features dependant on coordinates
@@ -71,6 +72,7 @@ def prepare_features(options, images, coords, auto_seg, mask):
 
 
 def convert_image_list(images):
+    '''convert list of images into np array'''
     s=[]
     for (i,k) in enumerate(images):
         s.append(np.column_stack( tuple( np.ravel( j ) for j in k ) ) )
@@ -80,6 +82,7 @@ def convert_image_list(images):
 
 
 def parse_options():
+    '''parse command-line options'''
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Perform error-correction learning and application')
     
@@ -164,7 +167,6 @@ if __name__ == "__main__":
         if options.debug: print("Loading training images...")
         
         train=None
-        
         if options.train is not None:
             with open(options.train,'rb') as f:
                 train=json.load(f)
@@ -178,18 +180,23 @@ if __name__ == "__main__":
         #go over training samples
         clf=None
         
+        #scaler=preprocessing.StandardScaler().fit(X)
+        
         for (i,inp) in enumerate(train):
+            mask  =minc.Label(  inp[-3] ).data
+            ground=minc.Label(  inp[-2] ).data
+            auto  =minc.Label(  inp[-1] ).data
             
-            mask=minc.Label(   inp[-3] ).data
-            ground=minc.Label( inp[-2] ).data
-            auto=minc.Label(   inp[-1] ).data
-            
+            # normalize input features to zero mean and unit std
             images=[ preprocessing.scale(minc.Image(k).data) for k in inp[0:-3] ]
             
+            # store training data
             training_images.append( prepare_features( options, images, None, auto, mask ) )
-            #training_err.append( np.logical_xor( ground[mask>0], auto[mask>0] ) )
-            training_err.append( ground[mask>0] ) # perform direct learning right now
-                        
+            
+            # perform direct learning right now
+            training_output.append( ground[mask>0] ) 
+            
+            # dump first dataset for debugging
             if i == 0 and options.dump:
                 print "Dumping feature images..."
                 for (j,k) in enumerate( training_images[-1] ):
@@ -197,13 +204,14 @@ if __name__ == "__main__":
                     test[ mask>0 ]=k
                     out=minc.Image( data=test )
                     out.save( name="dump_{}.mnc".format(j), imitate=inp[0] )
-        
+                    
         if options.debug: print("Done")
 
         clf=None
-
+        
+        # convert into  a large array
         training_X = convert_image_list( training_images )  
-        training_Y = np.ravel( np.concatenate( tuple(j for j in training_err ) ) )
+        training_Y = np.ravel( np.concatenate( tuple(j for j in training_output ) ) )
 
         if options.debug: print("Fitting...")
 
