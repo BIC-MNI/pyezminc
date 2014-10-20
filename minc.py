@@ -122,7 +122,7 @@ def display(images, label=None, imitate=None):
         if label:
             label.save(name=tmp_label, imitate=imitate)
             cmd += ' -label {0}'.format(tmp_label)
-        print cmd
+        print(cmd)
         system.check_call_interact(cmd)
     except OSError:
         # Strange bug with pexpect which throws an exception when quitting
@@ -231,7 +231,7 @@ class Image(object):
         try:
             header = self.__wrapper.parse_header()
         except Exception as e:
-            print "MINC header exception to be fixed: {0}".format(e)
+            print("MINC header exception to be fixed: {0}".format(e))
             header = None
         return header
     
@@ -845,7 +845,7 @@ def main(argv=None):
     img_name = os.path.join(DATA_PATH, 'trial_site01_subject_00_screening_t2w.mnc.gz')
     img = minc.Image(img_name)
 
-    print 'All appears OK'
+    print('All appears OK')
 
 if __name__ == '__main__':
     main()
