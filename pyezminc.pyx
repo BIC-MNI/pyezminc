@@ -24,6 +24,12 @@ cimport numpy as np
 
 from operator import mul
 
+try:
+    from functools import reduce
+except ImportError:
+    pass
+
+
 # Numpy must be initialized. When using numpy from C or Cython you must
 # _always_ do that, or you will have segfaults
 np.import_array()
