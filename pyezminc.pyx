@@ -57,7 +57,6 @@ nctype_to_numpy = {NC_BYTE   : {True:np.int8,    False:np.uint8},
                    }  
 
 
-
 cdef class EZMincWrapper(object):
     '''
     Wrapper around EZminc reader/writer
@@ -579,4 +578,54 @@ cdef class parallel_output_iterator:
     def progress(self):
         return self._it.progress()
 
+cdef void read_one_transform(VIO_General_transform * _xfm):
+    cdef VIO_Transform_types _tt
+    _tt=get_transform_type(_xfm)
+    
+    if _tt==LINEAR:
+      cdef VIO_Transform *lin
+      lin=get_linear_transform_ptr(xfm);
+
+      TransformPointer transform;
+      std::string transformTypeName = "AffineTransform_";
+      transformTypeName += typeNameString;
+      transformTypeName += "_3_3";
+      this->CreateTransform(transform, transformTypeName);
+      ParametersType parameterArray;
+      parameterArray.SetSize(12);
+
+      for(int j = 0; j < 3; ++j)
+        {
+        for(int i = 0; i < 3; ++i)
+          {
+          parameterArray.SetElement(i+j*3, Transform_elem(*lin,j,i));
+          }
+        parameterArray.SetElement(j+9, Transform_elem(*lin,j,3));
+        }
+
+      if(xfm->inverse_flag)
+        {
+        typedef AffineTransform< TInternalComputationValueType, 3 > AffineTransformType;
+        typename AffineTransformType::Pointer tmp = AffineTransformType::New();
+        tmp->SetParametersByValue(parameterArray);
+        tmp->GetInverse(static_cast< AffineTransformType* >( transform.GetPointer()) );
+        }
+      else
+        {
+        transform->SetParametersByValue(parameterArray);
+        }
+      this->GetReadTransformList().push_back(transform);
+        
+    elif _tt==GRID_TRANSFORM:
+        
+    elif _tt==CONCATENATED_TRANSFORM:
+        
+    else:
+        raise Exception('Unsupoorted transformation type')
+
+def read_transform(input_xfm):
+    cdef VIO_General_transform _xfm
+    if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
+        raise Exception('Unable to open {}'.format(input_xfm))
+    get_transform_type
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

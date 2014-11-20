@@ -41,6 +41,16 @@ cdef extern from "<vector>" namespace "std":
 cdef extern from "netcdf.h":
     ctypedef int nc_type
 
+cdef extern from "volume_io.h":
+    VIO_General_transform
+    VIO_Transform
+    
+    input_transform_file
+    get_transform_type
+    get_linear_transform_ptr
+    cdef enum VIO_Transform_types:
+        LINEAR, THIN_PLATE_SPLINE, USER_TRANSFORM, CONCATENATED_TRANSFORM, GRID_TRANSFORM
+    
 cdef extern from "minc_1_rw.h" namespace "minc":
 
     cdef enum dimensions: 
