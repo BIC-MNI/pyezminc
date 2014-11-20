@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with PYEZMINC.  If not, see <http://www.gnu.org/licenses/>.
 
+# cython: c_string_type=unicode, c_string_encoding=utf8
+
 from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
 from libcpp cimport bool, string, vector
 

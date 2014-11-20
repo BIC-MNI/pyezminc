@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with PYEZMINC.  If not, see <http://www.gnu.org/licenses/>.
 
+# cython: c_string_type=unicode, c_string_encoding=utf8
+
 from cpython cimport PyObject, Py_INCREF
 
 # Import the Python-level symbols of numpy
@@ -182,7 +184,7 @@ cdef class EZMincWrapper(object):
 
     def load(self, fname=None, dtype=None, positive_directions=False, metadata_only=False, rw=False):
         ''' Load the mincfile into a numpy array'''
-        self.rdrptr.open(<char*?>fname, positive_directions, metadata_only, rw)
+        self.rdrptr.open(<bytes>fname, positive_directions, metadata_only, rw)
         self.minc_datatype = (<minc_1_base*>self.rdrptr).datatype()
         if not metadata_only:
             self.__init_ndarray(dtype=dtype)
