@@ -38,18 +38,9 @@ cdef extern from "<vector>" namespace "std":
         iterator begin()
         iterator end()
 
-cdef extern from "netcdf.h":
+cdef extern from "netcdf.h" :
     ctypedef int nc_type
 
-cdef extern from "volume_io.h":
-    VIO_General_transform
-    VIO_Transform
-    
-    input_transform_file
-    get_transform_type
-    get_linear_transform_ptr
-    cdef enum VIO_Transform_types:
-        LINEAR, THIN_PLATE_SPLINE, USER_TRANSFORM, CONCATENATED_TRANSFORM, GRID_TRANSFORM
     
 cdef extern from "minc_1_rw.h" namespace "minc":
 
@@ -222,4 +213,53 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
     cdef void save_standard_volume(minc_1_writer& rw, unsigned short *vol) except +
     cdef void save_standard_volume(minc_1_writer& rw, unsigned char *vol) except +
 
+cdef extern from "minc.h":
+    pass
+    
+cdef extern from "minc2.h":
+    pass
+
+cdef extern from "volume_io.h" :
+    ctypedef int VIO_BOOL 
+    ctypedef const char * VIO_STR
+    ctypedef double VIO_Transform_elem_type
+    ctypedef void * VIO_Volume
+    
+    cdef enum VIO_Status_t:
+        VIO_OK=0, VIO_ERROR, VIO_INTERNAL_ERROR, VIO_END_OF_FILE,VIO_QUIT
+    
+    ctypedef VIO_Status_t VIO_Status
+
+    cdef enum VIO_Transform_types_t:
+        LINEAR, THIN_PLATE_SPLINE, USER_TRANSFORM, CONCATENATED_TRANSFORM, GRID_TRANSFORM
+
+    ctypedef VIO_Transform_types_t VIO_Transform_types
+    
+    struct VIO_General_transform_t:
+        VIO_Transform_types  type
+        VIO_BOOL             inverse_flag
+        VIO_STR              displacement_volume_file 
+    
+    ctypedef VIO_General_transform_t VIO_General_transform
+
+    struct VIO_Transform_t:
+        VIO_Transform_elem_type    m[4][4]
+
+    ctypedef VIO_Transform_t VIO_Transform
+    
+    VIO_Status input_transform_file(VIO_STR filename,VIO_General_transform *tfm)
+    VIO_Transform_types get_transform_type(VIO_General_transform   *transform )
+    VIO_Transform  * get_linear_transform_ptr(VIO_General_transform   *transform)
+    int get_n_concated_transforms(VIO_General_transform   *transform)
+    VIO_General_transform  *get_nth_general_transform( VIO_General_transform   *transform, int n )
+    void  delete_general_transform(VIO_General_transform   *transform )
+    VIO_Status  output_transform_file(VIO_STR filename, VIO_STR comments, VIO_General_transform   *transform )
+    void  concat_general_transforms(VIO_General_transform   *first, VIO_General_transform   *second, VIO_General_transform   *result )
+    void  create_grid_transform_no_copy(
+        VIO_General_transform    *transform,
+        VIO_Volume               displacement_volume,
+        VIO_STR                  displacement_volume_file )
+    void  create_linear_transform(
+       VIO_General_transform   *transform,
+       VIO_Transform           *linear_transform )                                           
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
