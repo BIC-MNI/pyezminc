@@ -635,7 +635,7 @@ def write_transform(output_xfm,trans):
             
             create_linear_transform(&x, &lin)
         else:
-            create_grid_transform_no_copy( &x, <VIO_Volume>None, <VIO_STR>t[2] )
+            create_grid_transform_no_copy( &x, <VIO_Volume>NULL, <VIO_STR>t[2] ) 
             #TODO: copy files (?)
         if t[1]:
             x.inverse_flag=1
@@ -643,13 +643,12 @@ def write_transform(output_xfm,trans):
             x.inverse_flag=0
 
         if k>0:
-            
             concat_general_transforms( &_xfm, &x, &concated )
             _xfm=concated
         else:
             _xfm=x
-
-    wrt = output_transform_file(<char*>output_xfm,<char*>"PyEZminc",<VIO_General_transform*>&_xfm);
+    comment="PyEZMINC {}".format(repr(trans))
+    wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm);
     delete_general_transform(&_xfm);
 
     if wrt!=VIO_OK:
