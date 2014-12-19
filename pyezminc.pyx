@@ -198,7 +198,7 @@ cdef class EZMincWrapper(object):
 #        else:
 #            self.wrtptr.open(<char*?>fname, <minc_1_base>self.rdrptr[0])
         if history is not None:
-            self.wrtptr.append_history(<char*?>history)
+            self.wrtptr.append_history(<const char*?>history)
         self.__setup_write(dtype=dtype)
         self.__save_standard_volume(dtype=dtype)
         #(<minc_1_base*>self.wrtptr).close()
