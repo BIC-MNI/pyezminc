@@ -44,9 +44,11 @@ cdef extern from "netcdf.h" :
     
 cdef extern from "minc_1_rw.h" namespace "minc":
 
+    # MINC dimension space definition
     cdef enum dimensions: 
         DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
 
+    # MINC dimension info
     cdef cppclass dim_info:
         dim_info(int l, double sta,double spa,dimensions d,bool have_dir_cos)
         dim_info(int l, double sta,double spa,dimensions d)
@@ -56,9 +58,11 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         double dir_cos[3]
         string name
         dimensions  dim
-        
+
+    # MINC volume dimensions
     ctypedef vector[dim_info] minc_info
-    
+
+    # MINC base class for reading/writing
     cdef cppclass minc_1_base:
         minc_1_base()
         void close() except +
@@ -110,7 +114,8 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void insert(const char *varname,const char *attname,const vector[unsigned char] &val)
         
         minc_info info()
-      
+
+    # MINC reader
     cdef cppclass minc_1_reader:
         minc_1_reader() except +
         minc_1_reader(minc_1_reader) except +
@@ -127,6 +132,7 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         void open(const char *path) except +
         minc_info info()
 
+    # MINC writer
     cdef cppclass minc_1_writer:
         minc_1_writer() except +
         minc_1_writer(minc_1_writer) except +
@@ -149,6 +155,7 @@ cdef extern from "minc_1_rw.h" namespace "minc":
 
 cdef extern from "minc_1_iterators.h" namespace "minc":
 
+    # MINC input iterator
     cdef cppclass minc_input_iterator[T]:
         vector[long] cur() const
         minc_input_iterator()
@@ -161,6 +168,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         const T& value()
         double progress()
 
+    # MINC output iterator
     cdef cppclass minc_output_iterator[T]:
         vector[long] cur() const
         minc_output_iterator()
@@ -173,6 +181,7 @@ cdef extern from "minc_1_iterators.h" namespace "minc":
         void value(const T&)
         double progress()
 
+    
     cdef cppclass minc_parallel_input_iterator:
         bool next()
         bool last()

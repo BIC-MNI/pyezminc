@@ -342,6 +342,7 @@ cdef class input_iterator_real(object):
         if self.rdrptr!= NULL:
             del self.rdrptr
 
+
 cdef class input_iterator_int(object):
     cdef minc_input_iterator[int] * _it
     cdef minc_1_reader *rdrptr
@@ -396,7 +397,7 @@ cdef class output_iterator_real(object):
     cdef minc_output_iterator[float] * _it
     cdef minc_1_writer *wrtptr
 
-    def __cinit__(self,file,reference=None):
+    def __cinit__(self,file=None,reference=None):
         if reference is not None:
             self.wrtptr = new minc_1_writer()
             self.wrtptr.open(<char*?>file,<char*?>reference)
@@ -407,13 +408,17 @@ cdef class output_iterator_real(object):
             self.wrtptr = NULL
             self._it = NULL
 
-    def open(self,file,input_iterator_real reference):
+    def open(self,file,input_iterator_real reference=None,reference_file=None):
         if self._it != NULL:
             del self._it
         if self.wrtptr != NULL:
             del self.wrtptr
         self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+        if reference is not None:
+            self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+        else:
+            self.wrtptr.open(<char*?>file,<char*?>reference_file)
+            
         self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[float](self.wrtptr[0])
         self._it.begin()
@@ -422,9 +427,10 @@ cdef class output_iterator_real(object):
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
+            self._it.next()
             return 0
 
     def begin(self):
@@ -451,7 +457,7 @@ cdef class output_iterator_int(object):
     cdef minc_output_iterator[int] * _it
     cdef minc_1_writer *wrtptr
 
-    def __cinit__(self,file,reference=None):
+    def __cinit__(self,file=None,reference=None):
         if reference is not None:
             self.wrtptr = new minc_1_writer()
             self.wrtptr.open(<char*?>file,<char*?>reference)
@@ -462,15 +468,20 @@ cdef class output_iterator_int(object):
             self.wrtptr = NULL
             self._it = NULL
 
-    def open(self,file,input_iterator_int reference):
+    def open(self,file,input_iterator_int reference=None,reference_file=None):
         if self._it != NULL:
             del self._it
         if self.wrtptr != NULL:
             del self.wrtptr
-            
+        
         self.wrtptr = new minc_1_writer()
-        self.wrtptr.open(<char*?>file,reference.rdrptr[0])
-        self.wrtptr.setup_write_float()
+        
+        if reference is not None:
+            self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+        else:
+            self.wrtptr.open(<char*?>file,<char*?>reference_file)
+            
+        self.wrtptr.setup_write_int()
         self._it = new minc_output_iterator[int](self.wrtptr[0])
         self._it.begin()
 
@@ -478,9 +489,10 @@ cdef class output_iterator_int(object):
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
+            self._it.next()
             return 0
 
     def begin(self):
@@ -509,9 +521,10 @@ cdef class parallel_input_iterator:
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
+            self._it.next()
             return 0
 
     def begin(self):
@@ -552,9 +565,10 @@ cdef class parallel_output_iterator:
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
+            self._it.next()
             return 0
 
     def begin(self):
