@@ -364,8 +364,6 @@ class TestMaskedImage(unittest.TestCase):
         self.assertAlmostEqual(ma.sum(self.masked_data), 269225069.77336735)
 
 
-
-
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Run the unit tests on the pynrx module')

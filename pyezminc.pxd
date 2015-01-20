@@ -19,24 +19,26 @@
 from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
 from libcpp cimport bool, string, vector
 
+from libcpp.string cimport string
+from libcpp.vector cimport vector
 
-cdef extern from "string" namespace "std":
-    cdef cppclass string:
-        char* c_str()
+#cdef extern from "string" namespace "std":
+#    cdef cppclass string:
+#        char* c_str()
 
-cdef extern from "<vector>" namespace "std":
-    cdef cppclass vector[T]:
-        cppclass iterator:
-            T operator*()
-            iterator operator++()
-            bint operator==(iterator)
-            bint operator!=(iterator)
-        vector()
-        void push_back(T&)
-        T& operator[](int)
-        T& at(int)
-        iterator begin()
-        iterator end()
+#cdef extern from "<vector>" namespace "std":
+#    cdef cppclass vector[T]:
+#        cppclass iterator:
+#            T operator*()
+#            iterator operator++()
+#            bint operator==(iterator)
+#            bint operator!=(iterator)
+#        vector()
+#        void push_back(T&)
+#        T& operator[](int)
+#        T& at(int)
+#        iterator begin()
+#        iterator end()
 
 cdef extern from "netcdf.h" :
     ctypedef int nc_type
@@ -50,6 +52,7 @@ cdef extern from "minc_1_rw.h" namespace "minc":
 
     # MINC dimension info
     cdef cppclass dim_info:
+        dim_info()
         dim_info(int l, double sta,double spa,dimensions d,bool have_dir_cos)
         dim_info(int l, double sta,double spa,dimensions d)
         size_t length

@@ -58,6 +58,62 @@ nctype_to_numpy = {NC_BYTE   : {True:np.int8,    False:np.uint8},
                    NC_DOUBLE : {True:np.float64, False:np.float64},
                    }  
 
+# DIMENSION TYPES
+MINC_DIM_UNKNOWN=0
+MINC_DIM_X=1
+MINC_DIM_Y=2
+MINC_DIM_Z=3
+MINC_DIM_TIME=4
+MINC_DIM_VEC=5
+
+
+cdef class minc_dim_info:
+    cdef dim_info _info
+    def __cinit__(self, dim_info* info=NULL, length=0, \
+                  start=0.0, step=1.0, dim=MINC_DIM_UNKNOWN, \
+                  have_dir_cos=True, dir_cos=None):
+        if info ==NULL:
+            self._info.length=length
+            self._info.start=start
+            self._info.step=step
+            self._info.dim=dim
+            self._info.have_dir_cos=have_dir_cos
+            for i in range(3): self._info.dir_cos[i]=dir_cos[i]
+        else:
+            self._info.length=info.length
+            self._info.start=info.start
+            self._info.step=info.step
+            self._info.dim=info.dim
+            self._info.have_dir_cos=info.have_dir_cos
+            for i in range(3): self._info.dir_cos[i]=info.dir_cos[i]
+            
+    cdef dim_info info(self):
+        return self._info
+        
+    property length:
+        def __get__(self): return self._info.length
+        def __set__(self, x0): self._info.length = x0
+
+
+cdef from_minc_info(minc_info _info):
+    r=[]
+    for i in _info:
+        r.append(minc_dim_info(info=i))
+    return r
+
+
+cdef minc_info to_minc_info(info):
+    cdef minc_info r
+    cdef minc_dim_info _i
+    #r.resize(len(_info))
+
+    for i in enumerate(info):
+        _i=<minc_dim_info>i
+        #j.to_dim_info(r[i])
+        r.push_back( _i.info() )
+
+    return r
+
 
 cdef class EZMincWrapper(object):
     '''
@@ -224,32 +280,41 @@ cdef class EZMincWrapper(object):
         return (<minc_1_base*>self.rdrptr).ndim(i)
 
     def total_size(self):
+        '''total number voxels in volume'''
         return reduce(mul, [self.ndim(i) for i in range(1, self.nb_dim()+1)])
         
     def nspacing(self, i):
+        '''spacing 1 - x 2 - y 3- z'''
         return (<minc_1_base*>self.rdrptr).nspacing(i)
     
     def nstart(self, i):
+        '''start coordinates'''
         return (<minc_1_base*>self.rdrptr).nstart(i)
     
     def ndir_cos(self, i, j):
+        '''direction cosines'''
         if not self.have_dir_cos(i):
             return None
         return (<minc_1_base*>self.rdrptr).ndir_cos(i, j)
     
     def have_dir_cos(self, i):
+        '''flag to check presence of direction cosines matrix'''
         return (<minc_1_base*>self.rdrptr).have_dir_cos(i)
 
     def datatype(self):
+        '''volumne storage data type'''
         return (<minc_1_base*>self.rdrptr).datatype()
     
     def is_minc2(self):
+        '''Check if the volume is MINC2 file format'''
         return <bool>(<minc_1_base*>self.rdrptr).is_minc2()
     
     def history(self):
+        '''history of file opeations'''
         return (<minc_1_base*>self.rdrptr).history().c_str()
     
     def parse_header(self, debug=False):
+        '''read all minc header entries into a dictionary'''
         nbvars = (<minc_1_base*>self.rdrptr).var_number()
         header = dict()
         for varid in range(nbvars):
@@ -283,9 +348,11 @@ cdef class EZMincWrapper(object):
                     print "{0}:{1} = '{2}' ({3})".format(varname,attrname,attrvalue,attrtype)
                 header[varname][attrname] = attrvalue
                 pass
-
-
         return header
+
+    def info(self):
+        '''Get minc info'''
+        return  from_minc_info((<minc_1_base*>self.rdrptr).info())
 
     def __dealloc__ (self):
         del self.rdrptr
@@ -293,6 +360,7 @@ cdef class EZMincWrapper(object):
         del self.data
 
 cdef class input_iterator_real(object):
+    '''Iterate over all voxels in a file without loading the whole file into memory, real-valued voxels '''
     cdef minc_input_iterator[double] * _it
     cdef minc_1_reader *rdrptr
 
@@ -344,6 +412,7 @@ cdef class input_iterator_real(object):
 
 
 cdef class input_iterator_int(object):
+    '''Iterate over all voxels in a file without loading the whole file into memory, integere valued voxels '''
     cdef minc_input_iterator[int] * _it
     cdef minc_1_reader *rdrptr
 
