@@ -73,12 +73,22 @@ cdef class py_dim_info:
     def __cinit__(self):
         pass
     
+    
     cdef set(self, dim_info & info):
         self._info=info
-        
-    cdef dim_info& info(self):
+
+    
+    cdef dim_info info(self):
         return self._info
 
+        
+    @staticmethod
+    cdef create(dim_info & info):
+        p = py_dim_info()
+        p.set(info)
+        return p
+
+    
     property length:
         def __get__(self): return self._info.length
         def __set__(self, x0): self._info.length = x0
@@ -97,7 +107,7 @@ cdef class py_dim_info:
         
     property dim:
         def __get__(self): return self._info.dim
-        def __set__(self, x0): self._info.dim = x0
+        def __set__(self, x0): self._info.dim = <int>x0
 
     def dir_cos(self, i not None):
         return self._info.dir_cos[i]
@@ -110,9 +120,7 @@ cdef from_minc_info(minc_info _info):
     cdef dim_info i
     r=[]
     for i in _info:
-        ii=py_dim_info()
-        ii.set(i)
-        r.append( ii )
+        r.append( py_dim_info.create(i) )
     return r
 
 

@@ -42,15 +42,14 @@ from libcpp.vector cimport vector
 
 cdef extern from "netcdf.h" :
     ctypedef int nc_type
-
     
 cdef extern from "minc_1_rw.h" namespace "minc":
 
-    # MINC dimension space definition
-    cdef enum dimensions: 
-        DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
-
     # MINC dimension info
+    cdef enum dimensions:
+        DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
+        
+    # MINC dimension space definition
     cdef cppclass dim_info:
         dim_info()
         dim_info(int l, double sta,double spa,dimensions d,bool have_dir_cos)
@@ -58,9 +57,9 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         size_t length
         double step,start
         bool have_dir_cos
-        double dir_cos[3]
-        string name
-        dimensions  dim
+        double      dir_cos[3]
+        string      name
+        int  dim
 
     # MINC volume dimensions
     ctypedef vector[dim_info] minc_info
@@ -273,5 +272,6 @@ cdef extern from "volume_io.h" :
         VIO_STR                  displacement_volume_file )
     void  create_linear_transform(
        VIO_General_transform   *transform,
-       VIO_Transform           *linear_transform )                                           
+       VIO_Transform           *linear_transform )
+       
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
