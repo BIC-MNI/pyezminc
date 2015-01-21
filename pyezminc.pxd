@@ -46,20 +46,21 @@ cdef extern from "netcdf.h" :
 cdef extern from "minc_1_rw.h" namespace "minc":
 
     # MINC dimension info
-    cdef enum dimensions:
-        DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
+    #cdef enum minc_dimensions:
+    #    DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
+    ctypedef int minc_dimensions
         
     # MINC dimension space definition
     cdef cppclass dim_info:
         dim_info()
-        dim_info(int l, double sta,double spa,dimensions d,bool have_dir_cos)
-        dim_info(int l, double sta,double spa,dimensions d)
+        dim_info(int l, double sta,double spa,minc_dimensions d,bool have_dir_cos)
+        dim_info(int l, double sta,double spa,minc_dimensions d)
         size_t length
         double step,start
         bool have_dir_cos
         double      dir_cos[3]
         string      name
-        int  dim
+        minc_dimensions  dim
 
     # MINC volume dimensions
     ctypedef vector[dim_info] minc_info

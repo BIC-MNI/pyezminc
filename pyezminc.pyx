@@ -107,7 +107,7 @@ cdef class py_dim_info:
         
     property dim:
         def __get__(self): return self._info.dim
-        def __set__(self, x0): self._info.dim = <int>x0
+        def __set__(self, x0): self._info.dim = x0
 
     def dir_cos(self, i not None):
         return self._info.dir_cos[i]
