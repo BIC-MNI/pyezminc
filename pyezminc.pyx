@@ -67,51 +67,64 @@ MINC_DIM_TIME=4
 MINC_DIM_VEC=5
 
 
-cdef class minc_dim_info:
+cdef class py_dim_info:
     cdef dim_info _info
-    def __cinit__(self, dim_info* info=NULL, length=0, \
-                  start=0.0, step=1.0, dim=MINC_DIM_UNKNOWN, \
-                  have_dir_cos=True, dir_cos=None):
-        if info ==NULL:
-            self._info.length=length
-            self._info.start=start
-            self._info.step=step
-            self._info.dim=dim
-            self._info.have_dir_cos=have_dir_cos
-            for i in range(3): self._info.dir_cos[i]=dir_cos[i]
-        else:
-            self._info.length=info.length
-            self._info.start=info.start
-            self._info.step=info.step
-            self._info.dim=info.dim
-            self._info.have_dir_cos=info.have_dir_cos
-            for i in range(3): self._info.dir_cos[i]=info.dir_cos[i]
-            
-    cdef dim_info info(self):
-        return self._info
+    
+    def __cinit__(self):
+        pass
+    
+    cdef set(self, dim_info & info):
+        self._info=info
         
+    cdef dim_info& info(self):
+        return self._info
+
     property length:
         def __get__(self): return self._info.length
         def __set__(self, x0): self._info.length = x0
 
+    property step:
+        def __get__(self): return self._info.step
+        def __set__(self, x0): self._info.step = x0
+        
+    property start:
+        def __get__(self): return self._info.start
+        def __set__(self, x0): self._info.start = x0
 
+    property have_dir_cos:
+        def __get__(self): return self._info.have_dir_cos
+        def __set__(self, x0): self._info.have_dir_cos = x0
+        
+    property dim:
+        def __get__(self): return self._info.dim
+        def __set__(self, x0): self._info.dim = x0
+
+    def dir_cos(self, i not None):
+        return self._info.dir_cos[i]
+        
+    def set_dir_cos(self, i not None,v not None):
+        self._info.dir_cos[i]=v
+        
+        
 cdef from_minc_info(minc_info _info):
+    cdef dim_info i
     r=[]
     for i in _info:
-        r.append(minc_dim_info(info=i))
+        ii=py_dim_info()
+        ii.set(i)
+        r.append( ii )
     return r
 
 
-cdef minc_info to_minc_info(info):
+cdef minc_info to_minc_info(info): #minc_info
     cdef minc_info r
-    cdef minc_dim_info _i
+    cdef py_dim_info _i
     #r.resize(len(_info))
 
     for i in enumerate(info):
-        _i=<minc_dim_info>i
+        _i=<py_dim_info?>i
         #j.to_dim_info(r[i])
         r.push_back( _i.info() )
-
     return r
 
 
