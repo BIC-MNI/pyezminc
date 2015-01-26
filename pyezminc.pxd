@@ -22,6 +22,7 @@ from libcpp cimport bool, string, vector
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
+
 #cdef extern from "string" namespace "std":
 #    cdef cppclass string:
 #        char* c_str()
@@ -42,13 +43,14 @@ from libcpp.vector cimport vector
 
 cdef extern from "netcdf.h" :
     ctypedef int nc_type
+
+ctypedef int minc_dimensions
     
 cdef extern from "minc_1_rw.h" namespace "minc":
 
     # MINC dimension info
     #cdef enum minc_dimensions:
     #    DIM_UNKNOWN=0,DIM_X,DIM_Y,DIM_Z,DIM_TIME,DIM_VEC
-    ctypedef int minc_dimensions
         
     # MINC dimension space definition
     cdef cppclass dim_info:
@@ -62,9 +64,11 @@ cdef extern from "minc_1_rw.h" namespace "minc":
         string      name
         minc_dimensions  dim
 
+    
     # MINC volume dimensions
     ctypedef vector[dim_info] minc_info
 
+    
     # MINC base class for reading/writing
     cdef cppclass minc_1_base:
         minc_1_base()

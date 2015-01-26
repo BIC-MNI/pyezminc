@@ -32,16 +32,16 @@ MINCDIR = '/projects/souris/vfonov/1.9.07'
 MINCLIBS= ['minc2','z','m', 'minc_io'] 
 
 
-ext_modules=[Extension(
+ext_module=cythonize(Extension(
                     "pyezminc",                                              # name of extension
-                    ["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
+                    sources=["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
                     libraries=MINCLIBS,
                     include_dirs = [os.path.join(MINCDIR,'include'),
                                     numpy.get_include()],
                     library_dirs = [os.path.join(MINCDIR,'lib')],
                     runtime_library_dirs = [os.path.join(MINCDIR,'lib')],    # RPATH settings
                     #extra_objects = [os.path.join(MINCDIR,'libminc_io.a')], # Use this if using static link
-                    language="c++")]  # causes Cython to create C++ source
+                    language="c++" ))  # causes Cython to create C++ source
 
 setup(
     name = 'pyezminc',
@@ -51,7 +51,7 @@ setup(
     author_email = 'haz-edine@assemlal.com',
     cmdclass={'build_ext': build_ext},
     py_modules = ['minc'],
-    ext_modules = ext_modules,
+    ext_modules = ext_module,
     license = 'GNU GPL v2'
 )
 
