@@ -28,7 +28,10 @@ def prepare_features(options, images, coords, auto_seg, mask):
     
     #if options.coord:
     # add features dependant on coordinates
-    c=np.mgrid[ 0:images[0].shape[0] , 0:images[0].shape[1] , 0:images[0].shape[2]]
+    c=np.mgrid[ 0:images[0].shape[0] , 
+                0:images[0].shape[1] , 
+                0:images[0].shape[2] ]
+    
     image_no=len(images)
     # use with center at 0 and 1.0 at the edge, could have used preprocessing 
     
@@ -36,7 +39,7 @@ def prepare_features(options, images, coords, auto_seg, mask):
         images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
         images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
         images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
-    else: # assume we have thre sets of coords
+    else: # assume we have three sets of coords
         images.append( coords[0] )
         images.append( coords[1] )
         images.append( coords[2] )
@@ -54,7 +57,7 @@ def prepare_features(options, images, coords, auto_seg, mask):
                 if x!=0 or y!=0 or z!=0 :
                     images.append( np.roll( np.roll( np.roll( images[0], shift=x, axis=0 ), shift=y, axis=1), shift=z, axis=2 ) )
                     # add more context
-                    images.append( np.roll( np.roll( np.roll( aa,        shift=x, axis=0 ), shift=y, axis=1), shift=z, axis=2 ) )
+                    #images.append( np.roll( np.roll( np.roll( aa,        shift=x, axis=0 ), shift=y, axis=1), shift=z, axis=2 ) )
     
     app_features=len(images)-image_no-3 # 3 spatial features
     
@@ -181,6 +184,7 @@ if __name__ == "__main__":
                 train=list(csv.reader(f))
         
         training_images=[]
+        training_output=[]
         training_err=[]
         
         #go over training samples
@@ -203,7 +207,7 @@ if __name__ == "__main__":
             training_images.append( prepare_features( options, images, None, auto, mask ) )
             
             # perform direct learning right now
-            training_output.append( ground[mask>0] ) 
+            training_output.append( ground[mask>0] )
             
             # dump first dataset for debugging
             if i == 0 and options.dump:
