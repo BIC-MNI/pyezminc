@@ -26,7 +26,7 @@ import os
 #HOME = os.path.expanduser('~')
 
 # TODO: locate minc library
-MINCDIR = '/projects/souris/vfonov/1.9.07'
+MINCDIR = '/opt/minc_itk4'
 
 # TODO: determine if volume_io is still availabel as separate library
 MINCLIBS= ['minc2','z','m', 'minc_io'] 

@@ -87,10 +87,10 @@ def parse_options():
                                  description='Perform error-correction learning and application')
     
     parser.add_argument('--train',
-                    help="Training library in json format")
+                    help="Training library in json format (array of) image1,[image2,...imageN,]mask,ground-truth,auth")
                     
     parser.add_argument('--train_csv',
-                    help="Training library in CSV format")
+                    help="Training library in CSV format: image1,[image2,...imageN,]mask,ground-truth,auth")
     
     parser.add_argument('--input',
                     help="Automatic seg to be corrected")
@@ -135,6 +135,12 @@ def parse_options():
                     default=False,
                     help='Produce joint features between appearance and coordinate' )
     
+    parser.add_argument('--normalize', 
+                    action="store_true",
+                    dest="normalize",
+                    default=False,
+                    help='Normalized input images to have zero mean and unit variance' )
+    
     parser.add_argument('--random', 
                     type=int,
                     dest="random",
@@ -160,9 +166,9 @@ if __name__ == "__main__":
     options = parse_options()
     
     # load training images
-    if ( (options.train is not None or \
-          options.train_csv is not None)  and \
-          options.save is not None) :
+    if ( (options.train     is not None or \
+          options.train_csv is not None )  and \
+          options.save      is not None ) :
         
         if options.debug: print("Loading training images...")
         
@@ -188,7 +194,10 @@ if __name__ == "__main__":
             auto  =minc.Label(  inp[-1] ).data
             
             # normalize input features to zero mean and unit std
-            images=[ preprocessing.scale(minc.Image(k).data) for k in inp[0:-3] ]
+            if options.normalize:
+              images=[ preprocessing.scale(minc.Image(k).data) for k in inp[0:-3] ]
+            else:
+              images=[ minc.Image(k).data for k in inp[0:-3] ]
             
             # store training data
             training_images.append( prepare_features( options, images, None, auto, mask ) )
@@ -257,15 +266,18 @@ if __name__ == "__main__":
         
         if options.debug: print( "Loading input images..." )
         
-        images=[ preprocessing.scale( minc.Image( i ).data ) for i in options.image ]
-        
+        if options.normalize:
+          images=[ preprocessing.scale( minc.Image( i ).data ) for i in options.image ]
+        else:
+          images=[ minc.Image( i ).data for i in options.image ]
+
         mask=minc.Label( options.mask ).data
         auto=minc.Label( options.input ).data
-        
+
         out_cls=None
         test_x=convert_image_list ( [ prepare_features( options, images, None, auto, mask ) ] ) 
-        print test_x
-        
+        #print test_x
+
         out_cls=np.copy( auto ) # use input data 
         #out_cls=np.zeros_like( auto )
         
