@@ -141,7 +141,7 @@ if __name__ == "__main__":
                 if options.debug: print("Using mask")
                 out_cls = np.empty_like(images[0], dtype=np.int32 )
                 xg_predict = xgb.DMatrix(np.column_stack( tuple( np.ravel( j[ mask.data>0 ] ) for j in images  ) ))
-                out_cls[mask.data>0] = clf.predict( xg_predict )
+                out_cls[mask.data>0] = np.array(clf.predict( xg_predict ), dtype=np.int32 )
             else:
                 xg_predict = xgb.DMatrix(np.column_stack( tuple( np.ravel( j ) for j in images  ) ))
                 out_cls = np.array(clf.predict( xg_predict ), dtype=np.int32 )

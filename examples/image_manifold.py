@@ -105,14 +105,16 @@ if __name__ == "__main__":
             print("Fitting {}, dataset size:{} ...".format(options.method,training_X.shape))
     
         if options.method=="LLE":
-            man =  manifold.LocallyLinearEmbedding(n_components=options.c,
+            man =  manifold.LocallyLinearEmbedding(
+                                n_components=options.c,
                                 n_neighbors=options.n,
-                                        eigen_solver='auto',
-                                        method='standard')
+                                eigen_solver='auto',
+                                method='standard')
             Y=man.fit_transform(training_X)
                                         
         else: #if options.method=="Spectral":
-            man = manifold.SpectralEmbedding(n_components=options.c,
+            man = manifold.SpectralEmbedding(
+                                n_components=options.c,
                                 n_neighbors=options.n)
             Y=man.fit_transform(training_X)
             
@@ -138,3 +140,5 @@ if __name__ == "__main__":
                 out.save(name="{}_{:d}.mnc".format(options.output,i), imitate=options.image[0], history=history)
     else:
         print "Error in arguments"
+
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80

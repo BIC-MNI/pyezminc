@@ -295,3 +295,6 @@ if __name__ == "__main__":
         out.save(name=options.output, imitate=options.input, history=history)
     else:
         print "Error in arguments, run with --help"
+
+
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
