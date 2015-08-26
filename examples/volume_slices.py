@@ -57,53 +57,14 @@ def alpha_blend(si, so, ialpha, oalpha):
     
     return out
 
+
 def max_blend(si,so):
     """Perform max-blending
     """
     return np.maximum(si,so)
 
-if __name__ == "__main__":
-    options = parse_options()
-    
-    _img=minc.Image(options.input)
-    _idata=_img.data
-    data_shape=_img.data.shape
-    
-    _ovl=None
-    _odata=None
-    omin=0
-    omax=1
-    
-    if options.overlay is not None:
-        _ovl=minc.Image(options.overlay)
-        if _ovl.data.shape != data_shape:
-            print("Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl.data.shape),repr(data_shape))
-            exit(1)
-        if options.orange is None:
-            omin=np.nanmin(_ovl.data)
-            omax=np.nanmax(_ovl.data)
-        else:
-            omin=options.orange[0]
-            omax=options.orange[1]
-        _odata=_ovl.data
-        
-        if options.obg is not None:
-            _odata=ma.masked_less(_odata, options.obg)
-        
-        print("Overlay range: {} - {}".format(omin,omax))
-        
-    slices=[]
-    
-    # setup ranges
-    vmin=vmax=0.0
-    if options.range is not None:
-        vmin=options.range[0]
-        vmax=options.range[1]
-    else:
-        vmin=np.nanmin(_idata)
-        vmax=np.nanmax(_idata)
 
-
+def register_custom_maps():
     # register custom maps
     plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
         {'red':   ((0.0, 0.0, 0.0),
@@ -146,21 +107,60 @@ if __name__ == "__main__":
          'alpha': ((0.0, 0.0, 1.0),
                    (1.0, 1.0, 1.0))         
         }))
+
+
+if __name__ == "__main__":
+    options = parse_options()
+    
+    _img=minc.Image(options.input)
+    _idata=_img.data
+    data_shape=_img.data.shape
+    
+    _ovl=None
+    _odata=None
+    omin=0
+    omax=1
+    
+    if options.overlay is not None:
+        _ovl=minc.Image(options.overlay)
+        if _ovl.data.shape != data_shape:
+            print("Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl.data.shape),repr(data_shape))
+            exit(1)
+        if options.orange is None:
+            omin=np.nanmin(_ovl.data)
+            omax=np.nanmax(_ovl.data)
+        else:
+            omin=options.orange[0]
+            omax=options.orange[1]
+        _odata=_ovl.data
         
+        if options.obg is not None:
+            _odata=ma.masked_less(_odata, options.obg)
+        
+        print("Overlay range: {} - {}".format(omin,omax))
+        
+    slices=[]
+    
+    # setup ranges
+    vmin=vmax=0.0
+    if options.range is not None:
+        vmin=options.range[0]
+        vmax=options.range[1]
+    else:
+        vmin=np.nanmin(_idata)
+        vmax=np.nanmax(_idata)
+
     cm = plt.get_cmap(options.cmap)
-    print('image map={}'.format(options.cmap))
     cmo= plt.get_cmap(options.ocmap)
-    print('Overlay map={}'.format(options.ocmap))
     cmo.set_bad('k',alpha=0.0)
-    
+
     samples=options.slices
-    
+
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
     oNorm  = colors.Normalize(vmin=omin, vmax=omax)
     
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
     oscalarMap = cmx.ScalarMappable(norm=oNorm, cmap=cmo)
-    # show 10 coronal,axial and sagittal slices
 
     for i in range(0,data_shape[0],data_shape[0]/(samples-1)):
         si=scalarMap.to_rgba(_idata[i , : ,:])
