@@ -194,21 +194,28 @@ if __name__ == "__main__":
     w, h = plt.figaspect(3.0/samples)
     fig = plt.figure(figsize=(w,h))
     
+    
+    #cbar.ax.set_yticklabels(['< -1', '0', '> 1'])# vertically oriented colorbar
+
     #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
     
     for i,j in enumerate(slices):
         ax =  plt.subplot2grid( (3, samples), (i/samples, i%samples) )
-        imgplot = ax.imshow(j,origin='lower')
+        imgplot = ax.imshow(j,origin='lower',cmap=cm)
         ax.set_xticks([])
         ax.set_yticks([])
         ax.title.set_visible(False)
+        #cbar = fig.colorbar(imgplot, ticks=[vmin, (vmax+vmin)/2.0 ,vmax],orientation='horizontal')
+        #cbar.ax.set_xticklabels([str(vmin),str((vmax+vmin)/2.0),str(vmax)])
+        
         
     if options.title is not None:
         plt.suptitle(options.title,fontsize=20)
         plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
     else:
         plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
-    
+
+        
     #fig.tight_layout()
     #plt.show()
     plt.savefig(options.output, bbox_inches='tight', dpi=options.dpi)
