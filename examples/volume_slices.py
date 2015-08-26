@@ -2,6 +2,8 @@
 
 
 import numpy as np
+import numpy.ma as ma
+
 import scipy 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,45 +17,167 @@ def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Run tissue classifier ')
     
-    parser.add_argument('input',help="Run classifier on a set of given images")
+    parser.add_argument('input',    help="Input image")
+    parser.add_argument('--overlay',help="Input overlay image")
+    parser.add_argument('output',   help="Output image")
     
-    parser.add_argument('output',help="Output image")
+    parser.add_argument('--range', help="Image range",nargs=2,type=float)
+    parser.add_argument('--orange',help="Overlay range",nargs=2,type=float)
+    parser.add_argument('--cmap',  help="Image color-map",default='gray')
+    parser.add_argument('--ocmap', help="Overlay color-map",default='jet')
+    parser.add_argument('--slices',help="Number of slices to extract", default=10, type=int)
+    parser.add_argument('--title', help="Title of image")
+    parser.add_argument('--dpi',   help="Figure DPI",default=100,type=float)
+    parser.add_argument('--obg',   help="Set overlay background",type=float)
     
+    parser.add_argument('--ialpha',   help="Image alpha",default=0.8,type=float)
+    parser.add_argument('--oalpha',   help="Overlay alpha",default=0.2,type=float)
     options = parser.parse_args()
     
     return options
 
+def alpha_blend(si,so,ialpha,oalpha):
+    """Perform alpha-blending
+    """
+    si_rgb =   si[..., :3]
+    si_alpha = si[..., 3]*ialpha
+    
+    so_rgb =   so[..., :3]
+    so_alpha = so[..., 3]*oalpha
+    
+    out_alpha = si_alpha + so_alpha * (1. - si_alpha)
+    
+    out_rgb = (si_rgb * si_alpha[..., None] +
+        so_rgb * so_alpha[..., None] * (1. - si_alpha[..., None])) / out_alpha[..., None]
+    
+    out = np.zeros_like(si)
+    out[..., :3] = out_rgb 
+    out[..., 3]  = out_alpha
+    
+    return out
 
+def max_blend(si,so):
+    """Perform max-blending
+    """
+    return np.maximum(si,so)
 
 if __name__ == "__main__":
     options = parse_options()
     
     _img=minc.Image(options.input)
     data_shape=_img.data.shape
-    #zoom=2.0
-    samples=10
+    
+    _ovl=None
+    _odata=None
+    omin=0
+    omax=1
+    
+    if options.overlay is not None:
+        _ovl=minc.Image(options.overlay)
+        if _ovl.data.shape != data_shape:
+            print("Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl.data.shape),repr(data_shape))
+            exit(1)
+        if options.orange is None:
+            omin=np.nanmin(_ovl.data)
+            omax=np.nanmax(_ovl.data)
+        else:
+            omin=options.orange[0]
+            omax=options.orange[1]
+        _odata=_ovl.data
+        
+        if options.obg is not None:
+            _odata=ma.masked_greater(_odata, options.obg)
+        
+        print("Overlay range: {} - {}".format(omin,omax))
+        
     slices=[]
     
-    jet = cm = plt.get_cmap('jet') 
-    cNorm  = colors.Normalize(vmin=0, vmax=120)
-    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+    # setup ranges
+    vmin=vmax=0.0
+    if options.range is not None:
+        vmin=options.range[0]
+        vmax=options.range[1]
+    else:
+        vmin=np.nanmin(_img.data)
+        vmax=np.nanmax(_img.data)
+
+
+    # register custom maps
+    plt.register_cmap(cmap=colors.LinearSegmentedColormap('red', 
+        {'red':   ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 1.0),
+                   (1.0, 0.1, 1.0)),
+
+         'green': ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+        }))
+         
+    plt.register_cmap(cmap=colors.LinearSegmentedColormap('green', 
+        {'green':  ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 1.0),
+                   (1.0, 0.1, 1.0)),
+
+         'red':   ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+        }))
+
+    plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue', 
+        {'blue':   ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 1.0),
+                   (1.0, 0.1, 1.0)),
+
+         'red':   ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0)),
+
+         'green': ((0.0, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+        }))
+        
+    cm = plt.get_cmap(options.cmap)
+    cmo= plt.get_cmap(options.ocmap)
+    cmo.set_bad('k',alpha=0.0)
     
+    samples=options.slices
+    
+    cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
+    oNorm  = colors.Normalize(vmin=omin, vmax=omax)
+    
+    scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
+    oscalarMap = cmx.ScalarMappable(norm=oNorm, cmap=cmo)
     # show 10 coronal,axial and sagittal slices
-    
+
     for i in range(0,data_shape[0],data_shape[0]/(samples-1)):
-        slices.append( scalarMap.to_rgba(
-                _img.data[i , : ,:]
-            ))
+        si=scalarMap.to_rgba(_img.data[i , : ,:])
+
+        if _ovl is not None:
+            so=oscalarMap.to_rgba(_odata[i , : ,:])
+            si=alpha_blend(si,so,options.ialpha, options.oalpha)
+            
+        slices.append( si )
         
     for i in range(0,data_shape[1],data_shape[1]/(samples-1)):
-        slices.append( scalarMap.to_rgba(
-                _img.data[: , i ,:]
-            ))
+        si=scalarMap.to_rgba(_img.data[: , i ,:])
+
+        if _ovl is not None:
+            so=oscalarMap.to_rgba(_odata[: , i ,:])
+            si=alpha_blend(si,so, options.ialpha, options.oalpha)
+
+        slices.append( si )
     
     for i in range(0,data_shape[2],data_shape[2]/(samples-1)):
-        slices.append( scalarMap.to_rgba(
-                _img.data[: , : , i]
-            ))
+        si=scalarMap.to_rgba(_img.data[: , : , i])
+
+        if _ovl is not None:
+            so=oscalarMap.to_rgba(_odata[: , : , i])
+            si=alpha_blend(si,so,options.ialpha,options.oalpha)
+
+        slices.append( si )
     
     w, h = plt.figaspect(3.0/samples)
     fig = plt.figure(figsize=(w,h))
@@ -67,9 +191,14 @@ if __name__ == "__main__":
         ax.set_yticks([])
         ax.title.set_visible(False)
         
-    plt.subplots_adjust(bottom=0.0,top=1.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
+    if options.title is not None:
+        plt.suptitle(options.title,fontsize=20)
+        plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
+    else:
+        plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
+    
     #fig.tight_layout()
     #plt.show()
-    plt.savefig(options.output,bbox_inches='tight', dpi=100)
+    plt.savefig(options.output, bbox_inches='tight', dpi=options.dpi)
     
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
