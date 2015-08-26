@@ -111,6 +111,7 @@ def register_custom_maps():
 
 if __name__ == "__main__":
     options = parse_options()
+    register_custom_maps()
     
     _img=minc.Image(options.input)
     _idata=_img.data
@@ -136,8 +137,6 @@ if __name__ == "__main__":
         
         if options.obg is not None:
             _odata=ma.masked_less(_odata, options.obg)
-        
-        print("Overlay range: {} - {}".format(omin,omax))
         
     slices=[]
     
