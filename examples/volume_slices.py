@@ -30,13 +30,14 @@ def parse_options():
     parser.add_argument('--dpi',   help="Figure DPI",default=100,type=float)
     parser.add_argument('--obg',   help="Set overlay background",type=float)
     
-    parser.add_argument('--ialpha',   help="Image alpha",default=0.8,type=float)
-    parser.add_argument('--oalpha',   help="Overlay alpha",default=0.2,type=float)
+    parser.add_argument('--ialpha', help="Image alpha",default=0.8,type=float)
+    parser.add_argument('--oalpha', help="Overlay alpha",default=0.2,type=float)
+    parser.add_argument('--max',    help="Use max mixing instead of alpha blending",default=False,action="store_true")
     options = parser.parse_args()
     
     return options
 
-def alpha_blend(si,so,ialpha,oalpha):
+def alpha_blend(si, so, ialpha, oalpha):
     """Perform alpha-blending
     """
     si_rgb =   si[..., :3]
@@ -65,6 +66,7 @@ if __name__ == "__main__":
     options = parse_options()
     
     _img=minc.Image(options.input)
+    _idata=_img.data
     data_shape=_img.data.shape
     
     _ovl=None
@@ -86,7 +88,7 @@ if __name__ == "__main__":
         _odata=_ovl.data
         
         if options.obg is not None:
-            _odata=ma.masked_greater(_odata, options.obg)
+            _odata=ma.masked_less(_odata, options.obg)
         
         print("Overlay range: {} - {}".format(omin,omax))
         
@@ -98,49 +100,57 @@ if __name__ == "__main__":
         vmin=options.range[0]
         vmax=options.range[1]
     else:
-        vmin=np.nanmin(_img.data)
-        vmax=np.nanmax(_img.data)
+        vmin=np.nanmin(_idata)
+        vmax=np.nanmax(_idata)
 
 
     # register custom maps
-    plt.register_cmap(cmap=colors.LinearSegmentedColormap('red', 
+    plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
         {'red':   ((0.0, 0.0, 0.0),
-                   (0.5, 0.0, 1.0),
-                   (1.0, 0.1, 1.0)),
+                   (1.0, 1.0, 1.0)),
 
          'green': ((0.0, 0.0, 0.0),
                    (1.0, 0.0, 0.0)),
 
          'blue':  ((0.0, 0.0, 0.0),
-                   (1.0, 0.0, 0.0))
+                   (1.0, 0.0, 0.0)),
+         
+         'alpha':  ((0.0, 0.0, 1.0),
+                    (1.0, 1.0, 1.0))         
         }))
          
     plt.register_cmap(cmap=colors.LinearSegmentedColormap('green', 
-        {'green':  ((0.0, 0.0, 0.0),
-                   (0.5, 0.0, 1.0),
-                   (1.0, 0.1, 1.0)),
+        {'green': ((0.0, 0.0, 0.0),
+                   (1.0, 1.0, 1.0)),
 
          'red':   ((0.0, 0.0, 0.0),
                    (1.0, 0.0, 0.0)),
 
          'blue':  ((0.0, 0.0, 0.0),
-                   (1.0, 0.0, 0.0))
+                   (1.0, 0.0, 0.0)),
+
+         'alpha': ((0.0, 0.0, 1.0),
+                   (1.0, 1.0, 1.0))         
         }))
 
     plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue', 
-        {'blue':   ((0.0, 0.0, 0.0),
-                   (0.5, 0.0, 1.0),
-                   (1.0, 0.1, 1.0)),
+        {'blue':  ((0.0, 0.0, 0.0),
+                   (1.0, 1.0, 1.0)),
 
          'red':   ((0.0, 0.0, 0.0),
                    (1.0, 0.0, 0.0)),
 
          'green': ((0.0, 0.0, 0.0),
-                   (1.0, 0.0, 0.0))
+                   (1.0, 0.0, 0.0)),
+         
+         'alpha': ((0.0, 0.0, 1.0),
+                   (1.0, 1.0, 1.0))         
         }))
         
     cm = plt.get_cmap(options.cmap)
+    print('image map={}'.format(options.cmap))
     cmo= plt.get_cmap(options.ocmap)
+    print('Overlay map={}'.format(options.ocmap))
     cmo.set_bad('k',alpha=0.0)
     
     samples=options.slices
@@ -153,29 +163,32 @@ if __name__ == "__main__":
     # show 10 coronal,axial and sagittal slices
 
     for i in range(0,data_shape[0],data_shape[0]/(samples-1)):
-        si=scalarMap.to_rgba(_img.data[i , : ,:])
+        si=scalarMap.to_rgba(_idata[i , : ,:])
 
         if _ovl is not None:
             so=oscalarMap.to_rgba(_odata[i , : ,:])
-            si=alpha_blend(si,so,options.ialpha, options.oalpha)
+            if options.max: si=max_blend(si,so)
+            else: si=alpha_blend(si,so, options.ialpha, options.oalpha)
             
         slices.append( si )
         
     for i in range(0,data_shape[1],data_shape[1]/(samples-1)):
-        si=scalarMap.to_rgba(_img.data[: , i ,:])
+        si=scalarMap.to_rgba(_idata[: , i ,:])
 
         if _ovl is not None:
             so=oscalarMap.to_rgba(_odata[: , i ,:])
-            si=alpha_blend(si,so, options.ialpha, options.oalpha)
+            if options.max: si=max_blend(si,so)
+            else: si=alpha_blend(si,so, options.ialpha, options.oalpha)
 
         slices.append( si )
     
     for i in range(0,data_shape[2],data_shape[2]/(samples-1)):
-        si=scalarMap.to_rgba(_img.data[: , : , i])
+        si=scalarMap.to_rgba(_idata[: , : , i])
 
         if _ovl is not None:
             so=oscalarMap.to_rgba(_odata[: , : , i])
-            si=alpha_blend(si,so,options.ialpha,options.oalpha)
+            if options.max: si=max_blend(si,so)
+            else: si=alpha_blend(si,so, options.ialpha, options.oalpha)
 
         slices.append( si )
     
