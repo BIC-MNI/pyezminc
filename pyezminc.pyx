@@ -252,6 +252,7 @@ cdef class EZMincWrapper(object):
     def parse_header(self, debug=False):
         nbvars = (<minc_1_base*>self.rdrptr).var_number()
         header = dict()
+        
         for varid in range(nbvars):
             varname = (<minc_1_base*>self.rdrptr).var_name(varid)
             header[varname] = dict()

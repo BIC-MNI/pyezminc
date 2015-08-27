@@ -23,16 +23,25 @@ from Cython.Build import cythonize
 import numpy
 import os
 
-#HOME = os.path.expanduser('~')
+# hack to allow user to specify location of minc installation
+import sys
 
-# TODO: locate minc library
-MINCDIR = '/opt/minc_itk4'
-
-# TODO: determine if volume_io is still availabel as separate library
+# default location of minc library
+MINCDIR = '/opt/minc'
 MINCLIBS= ['minc2','z','m', 'minc_io'] 
 
+# A hack to allow user to specify location of minc
+# unfortunately, making it proper by extending build and build_ext and install 
+# commands is not documented
+# 
+if '--mincdir' in sys.argv:
+    index = sys.argv.index('--mincdir')
+    sys.argv.pop(index)  # Removes the '--mincdir'
+    MINCDIR = sys.argv.pop(index)  # Returns the element after the '--mincdir'
 
-ext_modules=[Extension(
+
+
+ext_modules=[ Extension(
                     "pyezminc",                                              # name of extension
                     ["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
                     libraries=MINCLIBS,
@@ -45,11 +54,11 @@ ext_modules=[Extension(
 
 setup(
     name = 'pyezminc',
-    version = '1.0',
+    version = '1.1',
     url = 'https://github.com/BIC-MNI/pyezminc',
     author = 'Haz-Edine Assemlal',
     author_email = 'haz-edine@assemlal.com',
-    cmdclass={'build_ext': build_ext},
+    cmdclass={'build_ext': build_ext },
     py_modules = ['minc'],
     ext_modules = ext_modules,
     license = 'GNU GPL v2'
