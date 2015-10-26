@@ -264,9 +264,9 @@ cdef class EZMincWrapper(object):
                 if attrtype == NC_NAT:
                     attrvalue = np.nan
                 elif attrtype == NC_BYTE:
-                    attrvalue = (<minc_1_base*>self.rdrptr).att_value_byte(<char*>varname.c_str(), attrname.c_str())
+                    attrvalue = <bytes>(<minc_1_base*>self.rdrptr).att_value_byte(<char*>varname.c_str(), attrname.c_str())
                 elif attrtype == NC_CHAR:
-                    attrvalue = (<minc_1_base*>self.rdrptr).att_value_string(varname.c_str(), attrname.c_str())
+                    attrvalue = <bytes>(<minc_1_base*>self.rdrptr).att_value_string(varname.c_str(), attrname.c_str())
                 elif attrtype == NC_SHORT:
                     attrvalue = (<minc_1_base*>self.rdrptr).att_value_short(varname.c_str(), attrname.c_str())
                 elif attrtype == NC_INT:
