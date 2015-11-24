@@ -179,12 +179,12 @@ class Image(object):
             raise IOError('file does not exist', name)
         self._load(name, *args, **kwargs)
 
-    def _load(self, name, with_nan=False, *args, **kwargs):
+    def _load(self, name, with_nan=False, metadata_only=False, *args, **kwargs):
         '''Load a file'''
-        self.__wrapper.load(name, dtype=self.dtype)
+        self.__wrapper.load(name, dtype=self.dtype, metadata_only=metadata_only)
         self.header = self._read_header(name)
         # catch NaN values
-        if np.any(self.data == -sys.float_info.max):
+        if not metadata_only and np.any(self.data == -sys.float_info.max):
             if not with_nan:
                 raise Exception("NaN value detected in '{0}'".format(name))
             else:
