@@ -103,14 +103,14 @@ if __name__ == "__main__":
                 if options.debug: print("Label 0 will be discarded...")
                 labels.remove(0)
                 counts.pop(0) # assume it's first
-            
+
             features=len(images)
             outputs= len(labels)
-            
+
             if options.debug: 
               print("Available labels:{} counts: {} available images:{}".format(repr(labels),repr(counts),len(images)))
               print("Creating training dataset for classifier")
-            
+
             if options.trainmask is not None:
                 trainmask  = minc.Label(options.trainmask)
                 training_X = np.column_stack( tuple( np.ravel( j[  np.logical_and(prior.data>0 , trainmask.data>0 ) ] ) for j in images ) )
@@ -118,33 +118,48 @@ if __name__ == "__main__":
             else:
                 training_X = np.column_stack( tuple( np.ravel( j[prior.data>0] ) for j in images  ) )
                 training_Y = np.eye(outputs) [ np.ravel( prior.data[prior.data>0] -1 ) ].astype(np.float32)
-            
+
             if options.debug: 
               print("Fitting...")
-              print(training_Y)
-            
-            W = tf.Variable( tf.zeros([features,outputs]) )
-            b = tf.Variable( tf.zeros([outputs]) )
-            
+              np.set_printoptions(threshold='nan')
+              print( training_Y )
+
+            # W = tf.Variable( tf.zeros([features,outputs]) )
+            # b = tf.Variable( tf.zeros([outputs]) )
+
+            M = tf.Variable( tf.zeros([outputs, features ]) ) # means
+            s = tf.Variable( tf.ones( [ outputs, features, features ]) ) # covariance matrixes
+
             # TODO: run tensor-flow style training here
             x = tf.placeholder("float32", [None, features])
-            y = tf.nn.softmax(tf.matmul(x,W) + b)
-            
-            y_ = tf.placeholder("float32", [None,outputs])
+            # need to replicate input as many times as there are classes
+            #rx = tf.concat(0, [tf.expand_dims( x, 0 ) for k in range(outputs)])
+
+            # calculate probabilities of class membership (multivariate gaussian)
+            d = tf.expand_dims( tf.sub( x, M ), 0 )
+            y = tf.nn.softmax(  tf.exp( tf.mul(tf.batch_matmul( tf.batch_matmul( d, tf.batch_matrix_inverse(s) ), tf.transpose(d) ) , -0.5) ) )
+            # y = tf.nn.softmax(tf.matmul(x,W) + b) # trivial linear case 
+
+            y_ = tf.placeholder("float32", [None, outputs] )
             cross_entropy = -tf.reduce_sum(y_*tf.log(y))
-            train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cross_entropy)
-            
+            opt = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+            train_step = opt.minimize(cross_entropy)
+
             init = tf.initialize_all_variables()
             sess = tf.Session()
             sess.run(init)
-            
-            sess.run(train_step, feed_dict={x: training_X, y_: training_Y})
-            
+
+            for step in xrange(0, 20):
+                sess.run(train_step, feed_dict={x: training_X, y_: training_Y})
+                #opt.run()
+                #if step % 20 == 0:
+                print step, sess.run(cross_entropy, feed_dict={x: training_X, y_: training_Y})
+
+            print sess.run(W), sess.run(b),
             correct_prediction = tf.equal(tf.argmax(training_Y,1), tf.argmax(y_,1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-            
             print sess.run(accuracy, feed_dict={x: training_X, y_: training_Y})
-            print sess.run(W), sess.run(b)
+
         if options.debug: 
           #TODO: print W and b
           pass
