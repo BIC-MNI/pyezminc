@@ -66,7 +66,6 @@ if __name__ == "__main__":
         # convert to float as we go
         images= [ minc.Image(i).data.astype(np.float32)  for i in options.image ]
         input_images=len(images)
-        
         if options.neighbours is not None:
           for i in range(input_images) :
               for x in range(-patch_size,patch_size+1) :
@@ -81,6 +80,11 @@ if __name__ == "__main__":
             images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
             images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
             images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
+
+        image_ranges=[]
+        
+        for i in range(len(images)):
+          image_ranges.append(np.ptp(images[i]))
 
         mask=None
         if options.mask is not None:
@@ -104,7 +108,7 @@ if __name__ == "__main__":
                 labels.remove(0)
                 counts.pop(0) # assume it's first
 
-            features=len(images)
+            num_features=len(images)
             num_classes= len(labels)
 
             if options.debug: 
@@ -121,65 +125,88 @@ if __name__ == "__main__":
 
             if options.debug: 
               print("Fitting...")
-              np.set_printoptions(threshold='nan')
-              print( training_Y )
+              #np.set_printoptions(threshold='nan')
+              #print( training_Y )
               
-            x  = tf.placeholder("float32", [None, features] )
-            y_ = tf.placeholder("int32", [None] )
+            x  = tf.placeholder("float32", [None, num_features] )
+            y_ = tf.placeholder("int32",   [None] )
 
-            # W = tf.Variable( tf.zeros([features,outputs]) )
+            # W = tf.Variable( tf.zeros([num_features,outputs]) )
             # b = tf.Variable( tf.zeros([outputs]) )
 
             with tf.name_scope('gaussian') as scope:
                 # initialize mean and covariance matrix
                 batch_size = tf.size(y_)
-                labels  = tf.expand_dims(y_, 1)
-                indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+                _labels  = tf.expand_dims(y_, 1)
+                _indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
                 
-                concated = tf.concat(1, [indices, labels])
+                concated = tf.concat(1, [_indices, _labels])
                 
-                onehot_labels = tf.sparse_to_dense(
-                    concated, tf.pack([batch_size, num_classes]), 1.0, 0.0)
+                onehot_labels = tf.to_float(tf.sparse_to_dense(
+                    concated, tf.pack([batch_size, num_classes]), 1.0, 0.0))
                 
-                M = tf.Variable( tf.zeros( [num_classes, features ] ), name="means" )
-                s = tf.Variable( tf.concat(0,[tf.expand_dims( tf.diag( tf.ones([features]) ),0 ) for x in range(num_classes)]) , name="covariance" )
+                # going to iterate over all outputs, because I don't know how to do it easier
+                out=[]
                 
-            
-                # need to replicate input as many times as there are classes
-                #rx = tf.concat(0, [tf.expand_dims( x, 0 ) for k in range(outputs)])
-
-            
-                # calculate probabilities of class membership (multivariate gaussian)
-                d     = tf.sub( tf.expand_dims( x, 1 ) , M  )
-                s_inv = tf.batch_matrix_inverse(s)
-            
-                m1 = tf.batch_matmul( d, s_inv )
-            
-                m2 = tf.batch_matmul( m1, d, adj_y=True)
+                #mean  = tf.Variable( tf.zeros(         [ num_classes, num_features]   ) , name="means")
+                # create uniformly distributed means
+                sigma = tf.Variable( tf.concat(0,      [ tf.expand_dims( tf.diag( tf.ones( [ num_features] ) ), 0) for k in range(num_classes)] ), name="covariance" )
                 
-                y  = tf.exp( -0.5*m2 ) 
+                for i in range( num_classes ):
+                  
+                  M     = tf.squeeze(tf.split(0,num_classes, mean )[i])
+                  s     = tf.squeeze(tf.split(0,num_classes, sigma)[i])
+                    
+                  sdet=1.0
+                  
+                  if num_features==1: # special case with single modality
+                    m2    = tf.squeeze(tf.mul(tf.div(tf.sub(x,M),s),tf.sub(x,M)))
+                    sdet  = s
+                  else:
+                    # calculate probabilities of class membership (multivariate gaussian)
+                    d     = tf.sub( x , M  )
+                    s_inv = tf.matrix_inverse(s)
+                    
+                    m1    = tf.matmul( d,  s_inv )
+                    m2    = tf.matmul( m1, d, transpose_b=True)
+                    sdet  = tf.matrix_determinant(s)
+                    
+                  out.append( tf.expand_dims( tf.exp( -0.5*m2 )/sdet, -1 ))# should be columns
                 
-                cross_entropy = softmax_cross_entropy_with_logits(y,onehot_labels)
+                # align columns
+                y=tf.nn.softmax(tf.concat(1, out))
+                
+                cross_entropy = -tf.reduce_sum( onehot_labels * tf.log( y ) )
                 
                 loss = tf.reduce_mean(cross_entropy, name='xentropy_mean')
-                 
-                opt = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+                opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
                 train_step = opt.minimize(loss)
 
             init = tf.initialize_all_variables()
             sess = tf.Session()
             sess.run(init)
-
-            for step in xrange(0, 20):
+            
+            #print(sess.run(tf.matrix_inverse(s1)))
+            #print(sess.run(M1))
+            #print( y.get_shape())
+            #print( sess.run( tf.slice(y,[0,0],[1,2]), feed_dict={x: training_X, y_: training_Y}))
+            print( sess.run( onehot_labels, feed_dict={x: training_X, y_: training_Y})) 
+            print( sess.run( y, feed_dict={x: training_X, y_: training_Y})) 
+            print( sess.run(cross_entropy, feed_dict={x: training_X, y_: training_Y}))
+            
+            for step in xrange(0, 200):
                 sess.run(train_step, feed_dict={x: training_X, y_: training_Y} )
                 #opt.run()
                 #if step % 20 == 0:
                 print step, sess.run(cross_entropy, feed_dict={x: training_X, y_: training_Y})
 
-            print sess.run(W), sess.run(b),
-            correct_prediction = tf.equal(tf.argmax(training_Y,1), tf.argmax(y_,1))
+            print "mean=",sess.run(mean)
+            print "sigma=",sess.run(sigma),
+            
+            correct_prediction = tf.equal(training_Y , tf.to_int32(tf.argmax(y,1)))
+            
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-            print sess.run(accuracy, feed_dict={x: training_X, y_: training_Y})
+            print "Accuracy=",sess.run(accuracy, feed_dict={x: training_X, y_: training_Y})
 
         if options.debug: 
           #TODO: print W and b
