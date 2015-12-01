@@ -27,7 +27,7 @@ import os
 import sys
 
 # default location of minc library
-MINCDIR = '/opt/minc'
+MINCDIR = '/opt/minc-itk4'
 MINCLIBS= ['minc2','z','m', 'minc_io'] 
 
 # A hack to allow user to specify location of minc

@@ -127,7 +127,24 @@ if __name__ == "__main__":
               print("Fitting...")
               #np.set_printoptions(threshold='nan')
               #print( training_Y )
-              
+            
+            # calculate init_means:
+            init_means=np.empty( [ num_classes, num_features],dtype=np.float32)
+            init_sds  =np.empty( [ num_classes, num_features],dtype=np.float32)
+            
+            #print(training_X[:,0])
+            #print(training_X[:,0] [ training_Y==1 ])
+            
+            for c in range(num_classes):
+                for f in range(num_features):
+                    init_means[c,f] = np.mean( training_X[:,f] [ training_Y==c ] )
+                    init_sds[c,f]   = np.std ( training_X[:,f] [ training_Y==c ] )
+                    
+            print("initial means:")
+            print(init_means)
+            print("initial sds:")
+            print(init_sds)
+            
             x  = tf.placeholder("float32", [None, num_features] )
             y_ = tf.placeholder("int32",   [None] )
 
@@ -148,9 +165,8 @@ if __name__ == "__main__":
                 # going to iterate over all outputs, because I don't know how to do it easier
                 out=[]
                 
-                #mean  = tf.Variable( tf.zeros(         [ num_classes, num_features]   ) , name="means")
-                # create uniformly distributed means
-                sigma = tf.Variable( tf.concat(0,      [ tf.expand_dims( tf.diag( tf.ones( [ num_features] ) ), 0) for k in range(num_classes)] ), name="covariance" )
+                mean  = tf.Variable( init_means , name="means")
+                sigma = tf.Variable( tf.concat(0, [ tf.expand_dims( tf.diag( init_sds[c,:]) , 0) for c in range(num_classes) ] ), name="covariance" )
                 
                 for i in range( num_classes ):
                   
