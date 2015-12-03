@@ -14,7 +14,8 @@ import numpy as np
 
 # tensor-flow
 import tensorflow as tf
-
+# for timing
+import time
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Run tissue classifier ')
@@ -30,6 +31,11 @@ def parse_options():
                     
     parser.add_argument('--trainmask', 
                     help="Training mask" )
+    
+    parser.add_argument('--iter', 
+                    default=500,
+                    type=int,
+                    help="Number of iterations" )
 
     parser.add_argument('--debug', action="store_true",
                     dest="debug",
@@ -40,6 +46,11 @@ def parse_options():
                     dest="coord",
                     default=False,
                     help='Use image coordinates as additional features' )
+    
+    parser.add_argument('--log', 
+                    dest="log",
+                    default=None,
+                    help='Otput tensorboard log into this directory' )
     
     parser.add_argument('--neighbours', 
                     dest="neighbours",
@@ -125,26 +136,19 @@ if __name__ == "__main__":
 
             if options.debug: 
               print("Fitting...")
-              #np.set_printoptions(threshold='nan')
-              #print( training_Y )
             
             # calculate init_means:
-            init_means=np.empty( [ num_classes, num_features],dtype=np.float32)
-            init_sds  =np.empty( [ num_classes, num_features],dtype=np.float32)
+            init_means=np.empty( [ num_classes, num_features ],dtype=np.float32)
+            init_sds  =np.empty( [ num_classes, num_features, num_features],dtype=np.float32)
             
-            #print(training_X[:,0])
-            #print(training_X[:,0] [ training_Y==1 ])
-            
+
             for c in range(num_classes):
                 for f in range(num_features):
                     init_means[c,f] = np.mean( training_X[:,f] [ training_Y==c ] )
-                    init_sds[c,f]   = np.std ( training_X[:,f] [ training_Y==c ] )
                     
-            print("initial means:")
-            print(init_means)
-            print("initial sds:")
-            print(init_sds)
-            
+                init_sds[c,:,:]   = np.cov( np.transpose(training_X[ training_Y==c,: ]) )
+                    
+            _epsilon=1e-10
             x  = tf.placeholder("float32", [None, num_features] )
             y_ = tf.placeholder("int32",   [None] )
 
@@ -153,9 +157,9 @@ if __name__ == "__main__":
 
             with tf.name_scope('gaussian') as scope:
                 # initialize mean and covariance matrix
-                batch_size = tf.size(y_)
-                _labels  = tf.expand_dims(y_, 1)
-                _indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+                batch_size = tf.size( y_ )
+                _labels  = tf.expand_dims( y_, 1 )
+                _indices = tf.expand_dims( tf.range(0, batch_size, 1), 1)
                 
                 concated = tf.concat(1, [_indices, _labels])
                 
@@ -166,63 +170,108 @@ if __name__ == "__main__":
                 out=[]
                 
                 mean  = tf.Variable( init_means , name="means")
-                sigma = tf.Variable( tf.concat(0, [ tf.expand_dims( tf.diag( init_sds[c,:]) , 0) for c in range(num_classes) ] ), name="covariance" )
+                sigma = tf.Variable( init_sds   , name="covariance" )
                 
                 for i in range( num_classes ):
                   
                   M     = tf.squeeze(tf.split(0,num_classes, mean )[i])
                   s     = tf.squeeze(tf.split(0,num_classes, sigma)[i])
                     
-                  sdet=1.0
-                  
-                  if num_features==1: # special case with single modality
-                    m2    = tf.squeeze(tf.mul(tf.div(tf.sub(x,M),s),tf.sub(x,M)))
-                    sdet  = s
+                  if num_features==1: 
+                    # special case with single modality
+                    d     = tf.sub( x , M  )
+                    m2    = tf.mul(tf.div(d,s),d)
                   else:
                     # calculate probabilities of class membership (multivariate gaussian)
                     d     = tf.sub( x , M  )
-                    s_inv = tf.matrix_inverse(s)
+                    m1    = tf.matmul( d,  tf.matrix_inverse(s) )
+                    m2    = tf.expand_dims( tf.reduce_sum( tf.mul( m1, d ), 1), -1) # have to replace matrix multiplication with this
                     
-                    m1    = tf.matmul( d,  s_inv )
-                    m2    = tf.matmul( m1, d, transpose_b=True)
-                    sdet  = tf.matrix_determinant(s)
-                    
-                  out.append( tf.expand_dims( tf.exp( -0.5*m2 )/sdet, -1 ))# should be columns
+                  out.append( -0.5*m2 )# should be columns
                 
                 # align columns
-                y=tf.nn.softmax(tf.concat(1, out))
+                _out=tf.concat(1, out)
+                y = tf.nn.softmax(_out) + _epsilon # to avoid taking log of 0
                 
                 cross_entropy = -tf.reduce_sum( onehot_labels * tf.log( y ) )
-                
                 loss = tf.reduce_mean(cross_entropy, name='xentropy_mean')
-                opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-                train_step = opt.minimize(loss)
+                accuracy = tf.reduce_mean(tf.cast(tf.equal(training_Y , tf.to_int32(tf.argmax(y,1))), "float"))
 
+                #opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+                opt  = tf.train.AdagradOptimizer(learning_rate=0.1)
+                #opt = tf.train.AdamOptimizer()
+                train_step = opt.minimize(loss)
+                
+                #w_hist = tf.histogram_summary("means", mean)
+                #b_hist = tf.histogram_summary("sigmas", sigma)
+                #y_hist = tf.histogram_summary("y", y)
+                if options.log is not None:
+                    y_hist = tf.histogram_summary("y", y)
+                    cross_entropy_summary = tf.scalar_summary("cross_entropy", cross_entropy)
+                    accuracy_hist_summary = tf.histogram_summary("accuracy_hist", tf.cast(tf.equal(training_Y , tf.to_int32(tf.argmax(y,1))), "float"))
+                    accuracy_summary = tf.scalar_summary("accuracy", accuracy)
+                    
+            if options.log is not None:
+                summary_op = tf.merge_all_summaries()
+                
             init = tf.initialize_all_variables()
             sess = tf.Session()
+            
+            if options.log is not None:
+                print("Writing log to {}".format(options.log))
+                writer = tf.train.SummaryWriter(options.log, sess.graph_def)
+                
             sess.run(init)
-            
-            #print(sess.run(tf.matrix_inverse(s1)))
-            #print(sess.run(M1))
-            #print( y.get_shape())
-            #print( sess.run( tf.slice(y,[0,0],[1,2]), feed_dict={x: training_X, y_: training_Y}))
-            print( sess.run( onehot_labels, feed_dict={x: training_X, y_: training_Y})) 
-            print( sess.run( y, feed_dict={x: training_X, y_: training_Y})) 
-            print( sess.run(cross_entropy, feed_dict={x: training_X, y_: training_Y}))
-            
-            for step in xrange(0, 200):
-                sess.run(train_step, feed_dict={x: training_X, y_: training_Y} )
-                #opt.run()
-                #if step % 20 == 0:
-                print step, sess.run(cross_entropy, feed_dict={x: training_X, y_: training_Y})
 
-            print "mean=",sess.run(mean)
-            print "sigma=",sess.run(sigma),
+            print("Initial values:")
+            (initial_entropy,initial_mean,initial_sigma,initial_accuracy)= \
+              sess.run([cross_entropy,
+                        mean,
+                        sigma,
+                        accuracy], 
+                        feed_dict={x: training_X, y_: training_Y} )
+            print("entropy={},accuracy={}".format(initial_entropy,initial_accuracy))
+            t0 = time.time()
+            for step in xrange(0, options.iter):
+                if options.log is not None:
+                    (dummy,summary_str,_entropy,_mean,_sigma,_accuracy)= \
+                        sess.run([train_step,
+                                summary_op,
+                                cross_entropy,
+                                mean,
+                                sigma,
+                                accuracy], 
+                            feed_dict={x: training_X, y_: training_Y} )
+                    writer.add_summary(summary_str, step)
+                else:
+                    (dummy,_entropy,_mean,_sigma,_accuracy)= \
+                        sess.run([train_step,
+                                cross_entropy,
+                                mean,
+                                sigma,
+                                accuracy], 
+                            feed_dict={x: training_X, y_: training_Y} )
+                if step %100 == 0:
+                  print("{} - {},{}".format(step,_entropy,_accuracy))
+
+            t1 = time.time()      
+            (final_entropy,final_mean,final_sigma,final_accuracy)= \
+              sess.run([cross_entropy,
+                        mean,
+                        sigma,
+                        accuracy], 
+                        feed_dict={x: training_X, y_: training_Y} )
             
-            correct_prediction = tf.equal(training_Y , tf.to_int32(tf.argmax(y,1)))
+            print("final means=",final_mean)
+            print("initial means=",initial_mean)
             
-            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-            print "Accuracy=",sess.run(accuracy, feed_dict={x: training_X, y_: training_Y})
+            print("final sigmas=",final_sigma)
+            print("initial sigmas=",initial_sigma)
+            
+            print("final accuracy=",final_accuracy)
+            print("initial accuracy=",initial_accuracy)
+            
+            print("Elapsed time={}".format(t1-t0))
 
         if options.debug: 
           #TODO: print W and b
@@ -241,13 +290,13 @@ if __name__ == "__main__":
                 if options.debug: print("Using mask")
                 out_cls=np.empty_like(images[0], dtype=np.int32 )
                 inp=np.column_stack( tuple( np.ravel( j[ mask.data>0 ] ) for j in images  ) )
-                # fit the data
-                out = tf.argmax(tf.nn.softmax( tf.matmul(inp,W) + b ) , 1 )
-                out_cls[mask.data>0] = sess.run(out) + 1 
+                
+                out = sess.run( tf.argmax(y , 1)+1, feed_dict={x: inp} )
+                out_cls[mask.data>0] = out.astype(np.int32)
             else:
                 inp=np.column_stack( tuple( np.ravel( j ) for j in images  ) )
-                out = tf.argmax(tf.nn.softmax( tf.matmul(inp,W) + b ) , 1 )
-                out_cls = (sess.run(out) + 1 ).astype(np.int32)
+                out = sess.run( tf.argmax(y , 1)+1, feed_dict={x: inp} )
+                out_cls = out.astype(np.int32)
             
             if options.debug: 
               print("Saving output...")
@@ -257,3 +306,5 @@ if __name__ == "__main__":
             out.save(name=options.output, imitate=options.image[0],history=history)
     else:
         print "Error in arguments"
+
+# kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
