@@ -57,6 +57,17 @@ def parse_options():
                     default=None,
                     type=int,
                     help='Use neighbours as additional features' )
+    
+    parser.add_argument('--subsample',
+                        default=None,
+                        type=float,
+                        help='randomly subsample training data')
+    
+    #parser.add_argument('--product',
+                        #dest='product',
+                        #default=False,
+                        #action="store_true",
+                        #help='Use product as additional feature')
 
     parser.add_argument('--save',help='Save training results in a file')
     parser.add_argument('--load',help='Load training results from a file')
@@ -91,7 +102,14 @@ if __name__ == "__main__":
             images.append( ( c[0]-images[0].shape[0]/2.0)/ (images[0].shape[0]/2.0) )
             images.append( ( c[1]-images[0].shape[1]/2.0)/ (images[0].shape[1]/2.0) )
             images.append( ( c[2]-images[0].shape[2]/2.0)/ (images[0].shape[1]/2.0) )
-
+        
+            #if options.product:
+                ## create pair-wise product features
+                #cnt=len(images)
+                #for i in range(cnt-3):
+                    #for j in range(3):
+                        #images.append(np.multiply(images[i],images[cnt-3+j]))
+            
         image_ranges=[]
         
         for i in range(len(images)):
@@ -133,7 +151,9 @@ if __name__ == "__main__":
             else:
                 training_X = np.column_stack( tuple( np.ravel( j[prior.data>0] ) for j in images  ) )
                 training_Y = np.ravel( prior.data[prior.data>0] - 1 )
-
+                
+            num_datasets = training_Y.shape[0]
+            
             if options.debug: 
               print("Fitting...")
             
@@ -148,6 +168,7 @@ if __name__ == "__main__":
                     
                 init_sds[c,:,:]   = np.cov( np.transpose(training_X[ training_Y==c,: ]) )
                     
+            print(init_sds)
             _epsilon=1e-10
             x  = tf.placeholder("float32", [None, num_features] )
             y_ = tf.placeholder("int32",   [None] )
@@ -195,12 +216,12 @@ if __name__ == "__main__":
                 
                 cross_entropy = -tf.reduce_sum( onehot_labels * tf.log( y ) )
                 loss = tf.reduce_mean(cross_entropy, name='xentropy_mean')
-                accuracy = tf.reduce_mean(tf.cast(tf.equal(training_Y , tf.to_int32(tf.argmax(y,1))), "float"))
+                accuracy = tf.reduce_mean(tf.cast(tf.equal(y_ , tf.to_int32(tf.argmax(y,1))), "float"))
 
                 #opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
                 opt  = tf.train.AdagradOptimizer(learning_rate=0.1)
                 #opt = tf.train.AdamOptimizer()
-                train_step = opt.minimize(loss)
+                train_step = opt.minimize(loss)# ,[mean,sigma]
                 
                 #w_hist = tf.histogram_summary("means", mean)
                 #b_hist = tf.histogram_summary("sigmas", sigma)
@@ -208,7 +229,7 @@ if __name__ == "__main__":
                 if options.log is not None:
                     y_hist = tf.histogram_summary("y", y)
                     cross_entropy_summary = tf.scalar_summary("cross_entropy", cross_entropy)
-                    accuracy_hist_summary = tf.histogram_summary("accuracy_hist", tf.cast(tf.equal(training_Y , tf.to_int32(tf.argmax(y,1))), "float"))
+                    accuracy_hist_summary = tf.histogram_summary("accuracy_hist", tf.cast(tf.equal(y_ , tf.to_int32(tf.argmax(y,1))), "float"))
                     accuracy_summary = tf.scalar_summary("accuracy", accuracy)
                     
             if options.log is not None:
@@ -232,27 +253,38 @@ if __name__ == "__main__":
                         feed_dict={x: training_X, y_: training_Y} )
             print("entropy={},accuracy={}".format(initial_entropy,initial_accuracy))
             t0 = time.time()
-            for step in xrange(0, options.iter):
-                if options.log is not None:
-                    (dummy,summary_str,_entropy,_mean,_sigma,_accuracy)= \
-                        sess.run([train_step,
-                                summary_op,
-                                cross_entropy,
-                                mean,
-                                sigma,
-                                accuracy], 
-                            feed_dict={x: training_X, y_: training_Y} )
-                    writer.add_summary(summary_str, step)
-                else:
-                    (dummy,_entropy,_mean,_sigma,_accuracy)= \
-                        sess.run([train_step,
-                                cross_entropy,
-                                mean,
-                                sigma,
-                                accuracy], 
-                            feed_dict={x: training_X, y_: training_Y} )
-                if step %100 == 0:
-                  print("{} - {},{}".format(step,_entropy,_accuracy))
+            sub_iters=100
+            epochs=options.iter/sub_iters
+            training_X_=training_X
+            training_Y_=training_Y
+            for step in xrange(0, epochs):
+                # get a new random subsample if needed 
+                if options.subsample is not None:
+                    subset=np.random.choice(num_datasets,size=num_datasets*options.subsample,replace=False)
+                    training_Y_=training_Y[subset]
+                    training_X_=training_X[subset,:]
+                
+                for sstep in xrange(sub_iters):
+                    if options.log is not None:
+                        (dummy,summary_str,_entropy,_mean,_sigma,_accuracy)= \
+                            sess.run([train_step,
+                                    summary_op,
+                                    cross_entropy,
+                                    mean,
+                                    sigma,
+                                    accuracy], 
+                                feed_dict={x: training_X_, y_: training_Y_} )
+                        writer.add_summary(summary_str, step*sub_iters+sstep)
+                    else:
+                        (dummy,_entropy,_mean,_sigma,_accuracy)= \
+                            sess.run([train_step,
+                                    cross_entropy,
+                                    mean,
+                                    sigma,
+                                    accuracy], 
+                                feed_dict={x: training_X_, y_: training_Y_} )
+
+                print("{} - {},{}".format(step*sub_iters,_entropy,_accuracy))
 
             t1 = time.time()      
             (final_entropy,final_mean,final_sigma,final_accuracy)= \
