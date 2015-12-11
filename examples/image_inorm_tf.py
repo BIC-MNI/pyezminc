@@ -89,7 +89,7 @@ def parse_options():
 def tf_naive_histogram(hist_bins,values,bw):
     return tf.reduce_sum( tf.exp(tf.square( 
         tf.sub( tf.expand_dims( hist_bins, 1), tf.expand_dims( values, 0) ) )
-     *(-1.0/bw))/np.sqrt(np.pi),1)/tf.to_float(tf.size(values))
+     *(-1.0/(bw*bw)))/np.sqrt(np.pi),1)/tf.to_float(tf.size(values))
 
 def tf_apply_corr(vals,coeff):
     #ret=coeff[0]
@@ -122,9 +122,13 @@ if __name__ == "__main__":
         refmask  = minc.Label(options.refmask)
         rmm = np.logical_and(ref_image>0 , refmask.data>0 )
     
-    print ref_image[rmm]
+    #print ref_image[rmm]
     rmin=np.amin(ref_image[rmm])
     rmax=np.amax(ref_image[rmm])
+    print("Ref Range {} - {}".format(rmin,rmax))
+    imin=np.amin(image[mm])
+    imax=np.amax(image[mm])
+    print("Image Range {} - {}".format(imin,imax))
     
     #num_basis=len(_basis)
 
@@ -150,13 +154,13 @@ if __name__ == "__main__":
     coeff         = tf.Variable(init_coeff ,  name="coeff")
     hist_bins     = tf.linspace(rmin,rmax,options.bins, "hist_bins")
     
-    hist_ref  = tf_naive_histogram(hist_bins,y,bw)
+    hist_ref  = tf_naive_histogram(hist_bins,y,bw)+1e-10
     
     x_corr    = tf_apply_corr(x,coeff)
     
-    hist_corr = tf_naive_histogram(hist_bins,x_corr,bw)+1e-20
+    hist_corr = tf_naive_histogram(hist_bins,x_corr,bw)+1e-10
     
-    loss      = tf.reduce_sum(hist_ref*tf.log(hist_ref/hist_corr+1e-20))
+    loss      = tf.reduce_sum(hist_ref*tf.log(hist_ref/hist_corr+1e-10))
 
     #opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
     opt  = tf.train.AdagradOptimizer(learning_rate=0.1)
