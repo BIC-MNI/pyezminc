@@ -59,7 +59,7 @@ def parse_options():
                         help="Number of histogram bins")
     
     parser.add_argument('--bw',
-                        default=1.0,
+                        default=None,
                         type=float,
                         help="Gaussian kernel BW")
     
@@ -86,7 +86,8 @@ def parse_options():
     
     return options
 
-def tf_naive_histogram(hist_bins,values,bw):
+def tf_gauss_kernel_histogram(hist_bins,values,bw):
+    # gaussian kernel function
     return tf.reduce_sum( tf.exp(tf.square( 
         tf.sub( tf.expand_dims( hist_bins, 1), tf.expand_dims( values, 0) ) )
      *(-1.0/(bw*bw)))/np.sqrt(np.pi),1)/tf.to_float(tf.size(values))
@@ -130,6 +131,10 @@ if __name__ == "__main__":
     imax=np.amax(image[mm])
     print("Image Range {} - {}".format(imin,imax))
     
+    if options.bw is not None:
+        bw=options.bw
+    else:
+        bw=(rmax-rmin)/options.bins
     #num_basis=len(_basis)
 
     # initial coeffecients for normalization:
@@ -150,17 +155,17 @@ if __name__ == "__main__":
     
     x             = tf.placeholder("float32", [None] )
     y             = tf.placeholder("float32", [None] )  
-    bw            = tf.constant(options.bw)  
+    #bw            = tf.constant(options.bw)  
     coeff         = tf.Variable(init_coeff ,  name="coeff")
     hist_bins     = tf.linspace(rmin,rmax,options.bins, "hist_bins")
     
-    hist_ref  = tf_naive_histogram(hist_bins,y,bw)+1e-10
+    hist_ref  = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,y,bw),1e-10,1.0)
     
     x_corr    = tf_apply_corr(x,coeff)
     
-    hist_corr = tf_naive_histogram(hist_bins,x_corr,bw)+1e-10
+    hist_corr = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,x_corr,bw),1e-10,1.0)
     
-    loss      = tf.reduce_sum(hist_ref*tf.log(hist_ref/hist_corr+1e-10))
+    loss      = tf.reduce_sum(hist_ref*tf.log(  tf.clip_by_value(hist_ref/hist_corr,1e-10,1e10) ))
 
     #opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
     opt  = tf.train.AdagradOptimizer(learning_rate=0.1)
@@ -195,11 +200,14 @@ if __name__ == "__main__":
     num_datasets=training_X.shape[0]
     num_ref_datasets=training_Y.shape[0]
     
-    (_loss)= \
-        sess.run([loss],  
+    (_loss,_hist_ref,_hist_corr)= \
+        sess.run([loss,hist_ref,hist_corr],  
             feed_dict={x: training_X_,
                        y: training_Y_} )
     print("Initial loss:{} ".format(_loss))
+    
+    np.savetxt("ref.txt",_hist_ref)
+    np.savetxt("corr.txt",_hist_corr)
     print("Using random subsample of {} for fitting".format(int(num_datasets*options.subsample)))
     
     for step in xrange(0, epochs):
