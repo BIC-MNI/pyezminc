@@ -139,40 +139,43 @@ if __name__ == "__main__":
                 bw=(rmax-rmin)/options.bins*np.exp(1)/np.sqrt(2)
             
             # add features dependant on coordinates
-            c=np.mgrid[0:image.shape[0] , 0:image.shape[1] , 0:image.shape[2]].astype(np.float32)
+            c=np.mgrid[0:image.shape[0] , 
+                       0:image.shape[1] , 
+                       0:image.shape[2]].astype(np.float32)
             
             # normalized spatial coordinates
             #_extents=max(image.shape)
 
-            cx= np.ravel(c[0][mm] )
-            cy= np.ravel(c[1][mm] )
-            cz= np.ravel(c[2][mm] )
+            cx= np.ravel(c[0][mm])
+            cy= np.ravel(c[1][mm])
+            cz= np.ravel(c[2][mm])
             
+            #coord=np.column_stack(cx,cy,cz)
             # generate basis functions
-            print(cx)
+            #print(cx)
             
-            _basis=[]
+            #_basis=[]
             
             #options.M=5 # number of basis functions per dimension
             # for now initialize in numpy
             # TODO: maybe move to tensor-flow 
-            for i in range(options.M):
-                cosx=np.cos(np.pi*(cx+0.5)*i/image.shape[0])
-                for j in range(options.M):
-                    cosy=np.cos(np.pi*(cy+0.5)*j/image.shape[1])
-                    cosxy=cosx*cosy
-                    for k in range(options.M):
-                        cosz=np.cos(np.pi*(cz+0.5)*k/image.shape[2])
-                        _basis.append(cosxy*cosz)
-                        if options.debug: print("{} {} {}".format(i,j,k))
+            #for i in range(options.M):
+                #cosx=np.cos(np.pi*(cx+0.5)*i/image.shape[0])
+                #for j in range(options.M):
+                    #cosy=np.cos(np.pi*(cy+0.5)*j/image.shape[1])
+                    #cosxy=cosx*cosy
+                    #for k in range(options.M):
+                        #cosz=np.cos(np.pi*(cz+0.5)*k/image.shape[2])
+                        #_basis.append(cosxy*cosz)
+                        #if options.debug: print("{} {} {}".format(i,j,k))
                         
-            num_basis=len(_basis)
+            num_basis=options.M*options.M*options.M
 
             # initial coeffecients for normalization
             init_coeff=np.zeros([num_basis]).astype(np.float32)
             init_coeff[0]=1.0
             
-            basis=np.column_stack( tuple( j for j in _basis  ) )
+            #basis=np.column_stack( tuple( j for j in _basis  ) )
             training_X = np.ravel( image[ mm ]  ) 
             training_Y = np.ravel( ref_image[ rmm ] )
             # 
@@ -183,11 +186,17 @@ if __name__ == "__main__":
             x        = tf.placeholder("float32", [None] )
             y        = tf.placeholder("float32", [None] )
             basis_   = tf.placeholder("float32", [None, num_basis] )
+            #coord_   = tf.placeholder("float32", [None, 3] )
             
-            coeff    = tf.Variable(init_coeff,   name="basis_coeff")
+            # this is the only trainable variable
+            coeff    = tf.Variable(init_coeff,   name="basis_coeff", trainable=True)
             
+            #args     = (coord_+0.5)*np.pi/shape
+            
+                
             # normalization field, normalized to have unit sum
-            normalization = tf.reduce_sum( tf.mul( coeff, basis_ ), 1) # - tf.reduce_sum(coeff)
+            normalization = tf.reduce_sum( tf.mul(coeff, basis_), 1) # - tf.reduce_sum(coeff)
+            
             
             with tf.name_scope('correct') as scope:
                 hist_bins  = tf.linspace(rmin,rmax,options.bins, name="hist_bins")
@@ -200,14 +209,21 @@ if __name__ == "__main__":
                 # K-L divergence
                 loss      = tf.reduce_sum(hist_ref * tf.log(  tf.clip_by_value(hist_ref/hist_corr,1e-10,1e10) ),name='K-L_divergence')
 
-                #opt  = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-                opt  = tf.train.AdagradOptimizer(learning_rate=0.1)
+
+                global_step = tf.Variable(0, trainable=False)
+                starter_learning_rate = 0.1
+                learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+                                                        300, 0.96, staircase=True)
+
+                #opt  = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+                opt  = tf.train.AdagradOptimizer(learning_rate=learning_rate)
                 #opt = tf.train.AdamOptimizer()
-                train_step = opt.minimize(loss)# ,[mean,sigma]
+                train_step = opt.minimize(loss,var_list=[coeff],global_step=global_step)# ,[mean,sigma]
                 
                 if options.log is not None:
                     coeff_hist = tf.histogram_summary("coeff", coeff)
                     loss_summary = tf.scalar_summary("loss", loss)
+                    learning_rate_summary = tf.scalar_summary("learning_rate",learning_rate)
 
             if options.log is not None:
                 summary_op = tf.merge_all_summaries()
@@ -226,26 +242,47 @@ if __name__ == "__main__":
             epochs=options.iter/options.sub_iter
             training_X_=training_X
             training_Y_=training_Y
-            basis_subset=basis
             num_datasets=training_X.shape[0]
             r_num_datasets=training_Y.shape[0]
             
             
             for step in xrange(0, epochs):
                 # get a new random subsample if needed 
-                subset=np.random.choice(num_datasets, size=    int(num_datasets*options.subsample), replace=False)
-                subset_r=np.random.choice(r_num_datasets, size=int(r_num_datasets*options.subsample), replace=False)
+                if options.subsample<1.0:
+                    subset=np.random.choice(num_datasets, size=    int(num_datasets*options.subsample), replace=False)
+                    subset_r=np.random.choice(r_num_datasets, size=int(r_num_datasets*options.subsample), replace=False)
+                else:
+                    subset=np.random.choice(num_datasets, size=    int(options.subsample), replace=False)
+                    subset_r=np.random.choice(r_num_datasets, size=int(options.subsample), replace=False)
                 training_Y_=training_Y[subset_r]
                 training_X_=training_X[subset]
-                basis_subset=basis[subset,:]
-                    
+                
+                cx_=cx[subset]
+                cy_=cy[subset]
+                cz_=cz[subset]
+
+# calculate basis only for the points used to conserve mempory, TODO: move this into TF graph?
+                _basis=[]
+                
+                print("Recalculating basis...")
+                for i in range(options.M):
+                    cosx=np.cos(np.pi*(cx_+0.5)*i/image.shape[0])
+                    for j in range(options.M):
+                        cosy=np.cos(np.pi*(cy_+0.5)*j/image.shape[1])
+                        cosxy=cosx*cosy
+                        for k in range(options.M):
+                            cosz=np.cos(np.pi*(cz_+0.5)*k/image.shape[2])
+                            _basis.append(cosxy*cosz)
+                basis=np.column_stack( tuple( j for j in _basis  ) )
+                print("Done")
+                
                 for sstep in xrange(options.sub_iter):
                     if options.log is not None:
                         (dummy,summary_str,_loss)= \
                             sess.run([train_step, summary_op, loss], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
-                                           basis_: basis_subset},
+                                           basis_: basis},
                                     )
                         writer.add_summary(summary_str, step*options.sub_iter+sstep)
                     else:
@@ -253,17 +290,12 @@ if __name__ == "__main__":
                             sess.run([train_step, loss], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
-                                           basis_: basis_subset} )
-
+                                           basis_: basis} )
+                    print("{}".format(_loss))
                 print("{} - {} ".format(step*options.sub_iter,_loss))
             
             t1 = time.time()
             print("Elapsed time={}".format(t1-t0))
-            
-            #srt=np.argsort(training_Y)
-            #training_Y_srt=training_Y[srt]
-            #training_X_srt=training_X[srt]
-            #basis_srt=basis[srt,:]
             
             final_coeff= sess.run(coeff)
             #print("final loss=",final_loss)
@@ -273,7 +305,9 @@ if __name__ == "__main__":
             if options.output is not None:
                 if options.debug: print("Saving...")
                 
-                c=np.mgrid[0:image.shape[0] , 0:image.shape[1] , 0:image.shape[2]].astype(np.float32)
+                c=np.mgrid[0:image.shape[0] , 
+                           0:image.shape[1] , 
+                           0:image.shape[2]].astype(np.float32)
                 
                 cx= c[0]
                 cy= c[1]
