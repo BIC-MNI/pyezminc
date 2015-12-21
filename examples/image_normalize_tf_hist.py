@@ -146,7 +146,7 @@ if __name__ == "__main__":
             if options.bw is not None:
                 bw=options.bw
             else:
-                bw=(rmax-rmin)/options.bins*np.exp(1)/np.sqrt(2)
+                bw=(rmax-rmin)/options.bins*2.0*np.sqrt(2.0*np.log(2.0))
 
             
             # add features dependant on coordinates

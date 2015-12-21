@@ -46,13 +46,13 @@ def parse_options():
                     dest="debug",
                     default=False,
                     help='Print debugging information' )
-    
-    parser.add_argument('-M', 
-                    dest="M",
-                    default=5,
-                    type=int,
-                    help='Order' )
-    
+
+    parser.add_argument('-D',
+                    dest="D",
+                    default=50,
+                    type=float,
+                    help='Knot Distance' )
+
     parser.add_argument('--log', 
                     dest="log",
                     default=None,
@@ -73,6 +73,12 @@ def parse_options():
                         default=20,
                         type=int,
                         help='Histogram bins')
+    
+    parser.add_argument('--threads',
+                        dest="threads",
+                        default=None,
+                        type=int,
+                        help='Max number of threads')
     
     #parser.add_argument('--product',
                         #dest='product',
@@ -100,6 +106,13 @@ if __name__ == "__main__":
     history=minc.format_history(sys.argv)
     
     options = parse_options()
+    
+    if options.threads is not None:
+        tf_config=tf.ConfigProto(inter_op_parallelism_threads=options.threads,
+                             intra_op_parallelism_threads=options.threads)
+    else:
+        tf_config=tf.ConfigProto()
+        
     # load prior and input image
     if (options.ref is not None or options.load is not None) and options.image is not None:
         if options.debug: print("Loading images...")
@@ -136,44 +149,35 @@ if __name__ == "__main__":
             if options.bw is not None:
                 bw=options.bw
             else:
-                bw=(rmax-rmin)/options.bins*np.exp(1)/np.sqrt(2)
+                bw=(rmax-rmin)/options.bins*2.0
             
             # add features dependant on coordinates
             c=np.mgrid[0:image.shape[0] , 
                        0:image.shape[1] , 
                        0:image.shape[2]].astype(np.float32)
             
-            # normalized spatial coordinates
-            #_extents=max(image.shape)
-
-            cx= np.ravel(c[0][mm])
-            cy= np.ravel(c[1][mm])
-            cz= np.ravel(c[2][mm])
+            c=np.column_stack(( np.ravel(c[0][mm] ), np.ravel(c[1][mm] ),np.ravel(c[2][mm] )))
+            # TODO: use step size here to convert to physical units?
             
-            #coord=np.column_stack(cx,cy,cz)
-            # generate basis functions
-            #print(cx)
+            knots_x=np.floor( image.shape[0]/options.D )+1
+            knots_y=np.floor( image.shape[1]/options.D )+1
+            knots_z=np.floor( image.shape[2]/options.D )+1
             
-            #_basis=[]
+            num_basis=knots_z*knots_y*knots_x
             
-            #options.M=5 # number of basis functions per dimension
-            # for now initialize in numpy
-            # TODO: maybe move to tensor-flow 
-            #for i in range(options.M):
-                #cosx=np.cos(np.pi*(cx+0.5)*i/image.shape[0])
-                #for j in range(options.M):
-                    #cosy=np.cos(np.pi*(cy+0.5)*j/image.shape[1])
-                    #cosxy=cosx*cosy
-                    #for k in range(options.M):
-                        #cosz=np.cos(np.pi*(cz+0.5)*k/image.shape[2])
-                        #_basis.append(cosxy*cosz)
-                        #if options.debug: print("{} {} {}".format(i,j,k))
-                        
-            num_basis=options.M*options.M*options.M
-
+            spatial_bw=options.D*2.0
+            
+            # knots coordinates - uniformly sampling space
+            knots=(np.mgrid[ 0:knots_x,
+                            0:knots_y, 
+                            0:knots_z ].astype(np.float32))*options.D+options.D/2
+            
+            knots = np.column_stack(( np.ravel(knots[0] ),
+                                      np.ravel(knots[1] ),
+                                      np.ravel(knots[2] ) ))
+            
             # initial coeffecients for normalization
-            init_coeff=np.zeros([num_basis]).astype(np.float32)
-            init_coeff[0]=1.0
+            init_coeff=np.ones([num_basis]).astype(np.float32)/(spatial_bw*np.sqrt(2*np.pi))
             
             #basis=np.column_stack( tuple( j for j in _basis  ) )
             training_X = np.ravel( image[ mm ]  ) 
@@ -185,18 +189,21 @@ if __name__ == "__main__":
             
             x        = tf.placeholder("float32", [None] )
             y        = tf.placeholder("float32", [None] )
-            basis_   = tf.placeholder("float32", [None, num_basis] )
-            #coord_   = tf.placeholder("float32", [None, 3] )
+            #basis_   = tf.placeholder("float32", [None, num_basis] )
+            coord_   = tf.placeholder("float32", [None, 3] )
             
             # this is the only trainable variable
             coeff    = tf.Variable(init_coeff,   name="basis_coeff", trainable=True)
             
-            #args     = (coord_+0.5)*np.pi/shape
             
-                
-            # normalization field, normalized to have unit sum
-            normalization = tf.reduce_sum( tf.mul(coeff, basis_), 1) # - tf.reduce_sum(coeff)
+            # normalization field
+            # calculate EQ^2 distance from every coord to every knot
+            # then sum over them
+            dist_sq_element = tf.square( tf.sub( tf.expand_dims(coord_,1), tf.expand_dims(knots,0)))
+            dist_sq = tf.reduce_sum( dist_sq_element, 2)
+            kernels=tf.exp((-1.0/(spatial_bw*spatial_bw)) * dist_sq )
             
+            normalization = tf.reduce_sum( tf.expand_dims(coeff, 0 ) * kernels, 1 , name='Normalization_Field')
             
             with tf.name_scope('correct') as scope:
                 hist_bins  = tf.linspace(rmin,rmax,options.bins, name="hist_bins")
@@ -208,7 +215,6 @@ if __name__ == "__main__":
                 
                 # K-L divergence
                 loss      = tf.reduce_sum(hist_ref * tf.log(  tf.clip_by_value(hist_ref/hist_corr,1e-10,1e10) ),name='K-L_divergence')
-
 
                 global_step = tf.Variable(0, trainable=False)
                 starter_learning_rate = 0.1
@@ -229,7 +235,7 @@ if __name__ == "__main__":
                 summary_op = tf.merge_all_summaries()
                 
             init = tf.initialize_all_variables()
-            sess = tf.Session()
+            sess = tf.Session(config=tf_config)
             
             if options.log is not None:
                 print("Writing log to {}".format(options.log))
@@ -257,24 +263,7 @@ if __name__ == "__main__":
                 training_Y_=training_Y[subset_r]
                 training_X_=training_X[subset]
                 
-                cx_=cx[subset]
-                cy_=cy[subset]
-                cz_=cz[subset]
-
-# calculate basis only for the points used to conserve mempory, TODO: move this into TF graph?
-                _basis=[]
-                
-                print("Recalculating basis...")
-                for i in range(options.M):
-                    cosx=np.cos(np.pi*(cx_+0.5)*i/image.shape[0])
-                    for j in range(options.M):
-                        cosy=np.cos(np.pi*(cy_+0.5)*j/image.shape[1])
-                        cosxy=cosx*cosy
-                        for k in range(options.M):
-                            cosz=np.cos(np.pi*(cz_+0.5)*k/image.shape[2])
-                            _basis.append(cosxy*cosz)
-                basis=np.column_stack( tuple( j for j in _basis  ) )
-                print("Done")
+                coord=c[subset,:]
                 
                 for sstep in xrange(options.sub_iter):
                     if options.log is not None:
@@ -282,15 +271,15 @@ if __name__ == "__main__":
                             sess.run([train_step, summary_op, loss], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
-                                           basis_: basis},
+                                           coord_: coord},
                                     )
-                        writer.add_summary(summary_str, step*options.sub_iter+sstep)
+                        writer.add_summary(summary_str,step*options.sub_iter+sstep)
                     else:
                         (dummy,_loss)= \
                             sess.run([train_step, loss], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
-                                           basis_: basis} )
+                                           coord_: coord} )
                     print("{}".format(_loss))
                 print("{} - {} ".format(step*options.sub_iter,_loss))
             
@@ -305,36 +294,37 @@ if __name__ == "__main__":
             if options.output is not None:
                 if options.debug: print("Saving...")
                 
-                c=np.mgrid[0:image.shape[0] , 
-                           0:image.shape[1] , 
-                           0:image.shape[2]].astype(np.float32)
-                
-                cx= c[0]
-                cy= c[1]
-                cz= c[2]
-                
+                downsampled=np.array(image.shape)
+                #
+                print("Generating correction field:")
+                #
                 _normalization=np.zeros_like(image)
+                #
+                for i in range(downsampled[2]):
+                    c=np.mgrid[ 0:downsampled[0] ,
+                                0:downsampled[1] ,
+                                i:(i+1)].astype(np.float32)
+                    
+                    c=np.column_stack( ( np.ravel(c[0] ),np.ravel(c[1] ),np.ravel(c[2] )))
+                    
+                    _normalization[:,:,i]=sess.run(
+                        normalization, feed_dict={coord_: c} 
+                        ).reshape((downsampled[0],downsampled[1]))
+                # 
+                print("Done")
+                # TODO: interpolate here?
+                
                 #print(cx.shape,cy.shape,cz.shape,image.shape,final_coeff.shape)
                 
                 #options.M=5 # number of basis functions
                 # for now initialize in numpy
                 # TODO: maybe move to tensor-flow 
                 __i=0
-                print("Generating correction field:")
-                for i in range(options.M):
-                    cosx=np.cos(np.pi*(cx+0.5)*i/image.shape[0])
-                    print("{}%".format(i*100/options.M))
-                    for j in range(options.M):
-                        cosxy=cosx*np.cos(np.pi*(cy+0.5)*j/image.shape[1])
-                        for k in range(options.M):
-                            cosz=np.cos(np.pi*(cz+0.5)*k/image.shape[2])
-                            _normalization+=cosz*cosxy*final_coeff[__i]
-                            __i+=1
-                #
+                
                 #_normalization=np.exp(_normalization)
                 out=minc.Image(data=_normalization.astype(np.float64))
                 #out=minc.Image(data=out_cls.astype(np.float64))
-                out.save(name=options.output, imitate=options.image,history=history)
+                out.save(name=options.output, imitate=options.image, history=history)
                 
     else:
         print "Error in arguments"

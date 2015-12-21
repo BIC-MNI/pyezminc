@@ -69,10 +69,21 @@ def parse_options():
                         type=float,
                         help='Kernel bandwidth')
     
+    parser.add_argument('--sq',
+                        default=False,
+                        action="store_true",
+                        help='Use square kernel')
+    
     parser.add_argument('--bins',
-                        default=20,
+                        default=40,
                         type=int,
                         help='Histogram bins')
+    
+    parser.add_argument('--threads',
+                        dest="threads",
+                        default=None,
+                        type=int,
+                        help='Max number of threads')
     
     #parser.add_argument('--product',
                         #dest='product',
@@ -90,8 +101,16 @@ def parse_options():
 def tf_gauss_kernel_histogram(hist_bins,values,bw):
     with tf.name_scope('histogram') as scope:
         r=tf.reduce_sum( tf.exp(tf.square( 
-        tf.sub( tf.expand_dims( hist_bins, 1), tf.expand_dims( values, 0) ) )
-            *(-1.0/(bw*bw)))/np.sqrt(np.pi),1)/tf.to_float(tf.size(values))
+            tf.sub( tf.expand_dims( hist_bins, 1), tf.expand_dims( values, 0) ) )
+                *(-1.0/(2.0*bw*bw)))/(np.sqrt(np.pi*2.0)*bw),1)/tf.to_float(tf.size(values))
+    # gaussian kernel function
+        return r
+
+def tf_sq_histogram(hist_bins,values,bw):
+    with tf.name_scope('histogram') as scope:
+        r=tf.reduce_sum( tf.clip_by_value( 1.0-tf.abs(
+            tf.sub( tf.expand_dims( hist_bins, 1), tf.expand_dims( values, 0) ) )/bw
+                ,0.0,1.0))/tf.to_float(tf.size(values))
     # gaussian kernel function
         return r
 
@@ -100,6 +119,13 @@ if __name__ == "__main__":
     history=minc.format_history(sys.argv)
     
     options = parse_options()
+    
+    if options.threads is not None:
+        tf_config=tf.ConfigProto(inter_op_parallelism_threads=options.threads,
+                             intra_op_parallelism_threads=options.threads)
+    else:
+        tf_config=tf.ConfigProto()
+    
     # load prior and input image
     if (options.ref is not None or options.load is not None) and options.image is not None:
         if options.debug: print("Loading images...")
@@ -136,7 +162,10 @@ if __name__ == "__main__":
             if options.bw is not None:
                 bw=options.bw
             else:
-                bw=(rmax-rmin)/options.bins*np.exp(1)/np.sqrt(2)
+                if options.sq:
+                    bw=(rmax-rmin)/options.bins
+                else:
+                    bw=(rmax-rmin)*1.6/options.bins
             
             # add features dependant on coordinates
             c=np.mgrid[0:image.shape[0] , 
@@ -199,13 +228,19 @@ if __name__ == "__main__":
             
             
             with tf.name_scope('correct') as scope:
-                hist_bins  = tf.linspace(rmin,rmax,options.bins, name="hist_bins")
+                hist_bins  = tf.to_float(tf.linspace(rmin-bw,rmax+bw,options.bins+3, name="hist_bins"))
                 corr_x     = tf.mul(x,normalization,name='Corrected_Image') #tf.exp( tf.add( x, normalization ) )
                 # calculate standard deviations inside each class
                 
-                hist_ref  = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,y,bw),1e-10,1.0,name='Ref_histogram')
-                hist_corr = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,corr_x,bw),1e-10,1.0,name='Corr_histogram')
-                
+                if options.sq:
+                    hist_ref  = tf.clip_by_value(tf_sq_histogram(hist_bins,y,bw),     1e-10,1.0,name='Ref_histogram')
+                    hist_corr = tf.clip_by_value(tf_sq_histogram(hist_bins,corr_x,bw),1e-10,1.0,name='Corr_histogram')
+                else:
+                    hist_ref  = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,y,bw),     1e-10,1.0,name='Ref_histogram')
+                    hist_corr = tf.clip_by_value(tf_gauss_kernel_histogram(hist_bins,corr_x,bw),1e-10,1.0,name='Corr_histogram')
+                    
+                s_ref    = tf.reduce_sum(hist_ref)
+                s_corr   = tf.reduce_sum(hist_corr)
                 # K-L divergence
                 loss      = tf.reduce_sum(hist_ref * tf.log(  tf.clip_by_value(hist_ref/hist_corr,1e-10,1e10) ),name='K-L_divergence')
 
@@ -229,7 +264,7 @@ if __name__ == "__main__":
                 summary_op = tf.merge_all_summaries()
                 
             init = tf.initialize_all_variables()
-            sess = tf.Session()
+            sess = tf.Session(config=tf_config)
             
             if options.log is not None:
                 print("Writing log to {}".format(options.log))
@@ -278,28 +313,28 @@ if __name__ == "__main__":
                 
                 for sstep in xrange(options.sub_iter):
                     if options.log is not None:
-                        (dummy,summary_str,_loss)= \
-                            sess.run([train_step, summary_op, loss], 
+                        (dummy,summary_str,_loss,_s_ref,_s_corr)= \
+                            sess.run([train_step, summary_op, loss,s_ref,s_corr], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
                                            basis_: basis},
                                     )
                         writer.add_summary(summary_str, step*options.sub_iter+sstep)
                     else:
-                        (dummy,_loss)= \
-                            sess.run([train_step, loss], 
+                        (dummy,_loss,_s_ref,_s_corr)= \
+                            sess.run([train_step, loss,s_ref,s_corr], 
                                 feed_dict={x: training_X_, 
                                            y: training_Y_,
                                            basis_: basis} )
-                    print("{}".format(_loss))
-                print("{} - {} ".format(step*options.sub_iter,_loss))
+                    print("{} - {} {}".format(_loss,_s_ref,_s_corr))
+                print("{} - {} ".format((step+1)*options.sub_iter,_loss))
             
             t1 = time.time()
             print("Elapsed time={}".format(t1-t0))
             
             final_coeff= sess.run(coeff)
             #print("final loss=",final_loss)
-            print("Final coeffecients=",final_coeff)
+            #print("Final coeffecients=",final_coeff)
         
         
             if options.output is not None:

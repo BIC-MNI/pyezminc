@@ -17,6 +17,7 @@ from sklearn import svm
 from sklearn import neighbors
 from sklearn import ensemble
 from sklearn import tree
+from sklearn.preprocessing import OneHotEncoder
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -51,6 +52,11 @@ def parse_options():
                     default=False,
                     help='Use image coordinates as additional features' )
     
+    parser.add_argument('--hot', action="store_true",
+                    dest="hot",
+                    default=False,
+                    help='Use One-hot encoder first' )
+    
     parser.add_argument('--random', type=int,
                     dest="random",
                     help='Provide random state if needed' )
@@ -66,7 +72,6 @@ if __name__ == "__main__":
     history=minc.format_history(sys.argv)
     
     options = parse_options()
-    
     
     #print(repr(options))
     
@@ -92,7 +97,7 @@ if __name__ == "__main__":
         
         clf=None
         
-        
+        enc=None
         if options.load is not None:
             with open(options.load, 'rb') as f:
                 clf = pickle.load(f)
@@ -106,6 +111,8 @@ if __name__ == "__main__":
                 if options.debug: print("Label 0 will be discarded...")
                 labels.remove(0)
                 counts.pop(0) # assume it's first
+                
+            n_labels=len(labels)
         
             if options.debug: print("Available labels:{} counts: {} available images:{}".format(repr(labels),repr(counts),len(images)))
         
@@ -113,13 +120,15 @@ if __name__ == "__main__":
         
             if options.trainmask is not None:
                 trainmask = minc.Label(options.trainmask)
-            
                 training_X = np.column_stack( tuple( np.ravel( j[ np.logical_and(prior.data>0 , trainmask.data>0 ) ] ) for j in images  ) )
                 training_Y = np.ravel( prior.data[ np.logical_and(prior.data>0 , trainmask.data>0 ) ] )
             else:
                 training_X = np.column_stack( tuple( np.ravel( j[ prior.data>0 ] ) for j in images  ) )
                 training_Y = np.ravel( prior.data[ prior.data>0 ] )
         
+            if options.hot:
+              enc=OneHotEncoder()
+              training_Y=np.eye(n_labels)[training_Y-1]
         
             if options.debug: print("Fitting...")
         
@@ -154,9 +163,15 @@ if __name__ == "__main__":
             if mask is not None:
                 if options.debug: print("Using mask")
                 out_cls=np.empty_like(images[0], dtype=np.int32 )
-                out_cls[mask.data>0]=clf.predict( np.column_stack( tuple( np.ravel( j[ mask.data>0 ] ) for j in images  ) ) )
+                if options.hot:
+                  out_cls[mask.data>0]=enc.fit_transform(clf.predict( np.column_stack( tuple( np.ravel( j[ mask.data>0 ] ) for j in images  ) ) ))+1
+                else:
+                  out_cls[mask.data>0]=clf.predict( np.column_stack( tuple( np.ravel( j[ mask.data>0 ] ) for j in images  ) ) )
             else:
-                out_cls=clf.predict( np.column_stack( tuple( np.ravel( j ) for j in images  ) ) )
+                if options.hot:
+                  out_cls=enc.fit_transform(clf.predict( np.column_stack( tuple( np.ravel( j ) for j in images  ) ) ))+1
+                else:
+                  out_cls=clf.predict( np.column_stack( tuple( np.ravel( j ) for j in images  ) ) )
         
             if options.debug: print("Saving output...")
             
