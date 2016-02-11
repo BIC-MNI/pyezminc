@@ -198,7 +198,7 @@ if __name__ == "__main__":
                         #_basis.append(cosxy*cosz)
                         #if options.debug: print("{} {} {}".format(i,j,k))
                         
-            num_basis=options.M*options.M*options.M
+            num_basis=options.M*options.M*options.M*8
 
             # initial coeffecients for normalization
             init_coeff=np.zeros([num_basis]).astype(np.float32)
@@ -296,21 +296,42 @@ if __name__ == "__main__":
                 cy_=cy[subset]
                 cz_=cz[subset]
 
-# calculate basis only for the points used to conserve mempory, TODO: move this into TF graph?
+                # calculate basis only for the points used to conserve mempory, TODO: move this into TF graph?
                 _basis=[]
-                
+
                 print("Recalculating basis...")
                 for i in range(options.M):
-                    cosx=np.cos(np.pi*(cx_+0.5)*i/image.shape[0])
+                    cosx=np.cos(2*np.pi*cx_*i/image.shape[0])
+                    sinx=np.cos(2*np.pi*cx_*i/image.shape[0])
                     for j in range(options.M):
-                        cosy=np.cos(np.pi*(cy_+0.5)*j/image.shape[1])
+                        cosy=np.cos(2*np.pi*cy_*j/image.shape[1])
+                        siny=np.sin(2*np.pi*cy_*j/image.shape[1])
+                        
                         cosxy=cosx*cosy
+                        sinxy=sinx*siny
+                        cosxsiny=cosx*siny
+                        sinxcosy=sinx*cosy
+                        
                         for k in range(options.M):
-                            cosz=np.cos(np.pi*(cz_+0.5)*k/image.shape[2])
+                            cosz=np.cos(2*np.pi*cz_*k/image.shape[2])
+                            sinz=np.sin(2*np.pi*cz_*k/image.shape[2])
+                            
                             _basis.append(cosxy*cosz)
+                            _basis.append(cosxy*sinz)
+                            
+                            _basis.append(sinxy*cosz)
+                            _basis.append(sinxy*sinz)
+                            
+                            _basis.append(cosxsiny*cosz)
+                            _basis.append(cosxsiny*sinz)
+                            
+                            _basis.append(sinxcosy*cosz)
+                            _basis.append(sinxcosy*sinz)
+                            
+                            
                 basis=np.column_stack( tuple( j for j in _basis  ) )
                 print("Done")
-                
+
                 for sstep in xrange(options.sub_iter):
                     if options.log is not None:
                         (dummy,summary_str,_loss,_s_ref,_s_corr)= \
@@ -357,14 +378,35 @@ if __name__ == "__main__":
                 __i=0
                 print("Generating correction field:")
                 for i in range(options.M):
-                    cosx=np.cos(np.pi*(cx+0.5)*i/image.shape[0])
+                    cosx=np.cos(np.pi*cx*i/image.shape[0])
+                    sinx=np.cos(2*np.pi*cx*i/image.shape[0])
+
                     print("{}%".format(i*100/options.M))
                     for j in range(options.M):
-                        cosxy=cosx*np.cos(np.pi*(cy+0.5)*j/image.shape[1])
+                        cosy=np.cos(2*np.pi*cy*j/image.shape[1])
+                        siny=np.sin(2*np.pi*cy*j/image.shape[1])
+
+                        cosxy=cosx*cosy
+                        sinxy=sinx*siny
+                        
+                        cosxsiny=cosx*siny
+                        sinxcosy=sinx*cosy
+
                         for k in range(options.M):
-                            cosz=np.cos(np.pi*(cz+0.5)*k/image.shape[2])
-                            _normalization+=cosz*cosxy*final_coeff[__i]
-                            __i+=1
+                            cosz=np.cos(2*np.pi*cz*k/image.shape[2])
+                            sinz=np.sin(2*np.pi*cz*k/image.shape[2])
+                            
+                            _normalization+=cosxy*cosz*final_coeff[__i];__i+=1
+                            _normalization+=cosxy*sinz*final_coeff[__i];__i+=1
+                            
+                            _normalization+=sinxy*cosz*final_coeff[__i];__i+=1
+                            _normalization+=sinxy*sinz*final_coeff[__i];__i+=1
+                            
+                            _normalization+=cosxsiny*cosz*final_coeff[__i];__i+=1
+                            _normalization+=cosxsiny*sinz*final_coeff[__i];__i+=1
+                            
+                            _normalization+=sinxcosy*cosz*final_coeff[__i];__i+=1
+                            _normalization+=sinxcosy*sinz*final_coeff[__i];__i+=1
                 #
                 #_normalization=np.exp(_normalization)
                 out=minc.Image(data=_normalization.astype(np.float64))
