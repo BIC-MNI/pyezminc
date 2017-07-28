@@ -16,47 +16,65 @@ import numpy as np
 from sklearn import svm
 from sklearn import neighbors
 from sklearn import ensemble
+from sklearn import linear_model
 from sklearn import tree
+from sklearn.pipeline import Pipeline
+from sklearn import preprocessing
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Run tissue classifier ')
     
-    parser.add_argument('prior',help="classification prior")
+    parser.add_argument('prior',    
+                        help="classification prior")
     
-    parser.add_argument('image',help="Run classifier on a set of given images",nargs='+')
+    parser.add_argument('image',    
+                        help="Run classifier on a set of given images",nargs='+')
     
-    parser.add_argument('--output',help="Output image")
+    parser.add_argument('--output', 
+                        help="Output image")
     
     parser.add_argument('--mask', 
-                    help="Mask output results, set to 0 outside" )
+                        help="Mask output results, set to 0 outside" )
                     
     parser.add_argument('--trainmask', 
-                    help="Training mask" )
+                        help="Training mask" )
     
     parser.add_argument('--method',
-                    choices=['SVM','lSVM','nuSVM','NN','RanForest','AdaBoost','tree'],
-                    default='lSVM',
-                    help='Classification algorithm')
+                        choices=['SVM','lSVM','nuSVM','NN','RanForest','AdaBoost','tree','Logistic'],
+                        default='lSVM',
+                        help='Classification algorithm')
     
-    parser.add_argument('-n',type=int,help="nearest neighbors",default=15)
+    parser.add_argument('--preprocess',
+                        choices=['StandardScaler','Normalizer','MinMax'],
+                        help='Apply pre-processing stage')
+    
+    parser.add_argument('-n',
+                        type=int,
+                        help="integer parameter for classifier",default=15)
+    
+    parser.add_argument('-C',
+                        type=float,
+                        help="Regularizing parameter for classifier")
     
     parser.add_argument('--debug', action="store_true",
-                    dest="debug",
-                    default=False,
-                    help='Print debugging information' )
+                        dest="debug",
+                        default=False,
+                        help='Print debugging information' )
     
     parser.add_argument('--coord', action="store_true",
-                    dest="coord",
-                    default=False,
-                    help='Use image coordinates as additional features' )
+                        dest="coord",
+                        default=False,
+                        help='Use image coordinates as additional features' )
     
     parser.add_argument('--random', type=int,
-                    dest="random",
-                    help='Provide random state if needed' )
-                    
-    parser.add_argument('--save',help='Save training results in a file')
-    parser.add_argument('--load',help='Load training results from a file')
+                        dest="random",
+                        help='Provide random state if needed' )
+    
+    parser.add_argument('--save',
+                        help='Save training results in a file')
+    parser.add_argument('--load',
+                        help='Load training results from a file')
     
     options = parser.parse_args()
     
@@ -135,9 +153,21 @@ if __name__ == "__main__":
                 clf = ensemble.AdaBoostClassifier(n_estimators=options.n,random_state=options.random)
             elif options.method=='tree':
                 clf = tree.DecisionTreeClassifier(random_state=options.random)
+            elif options.method=='Logistic':
+                clf = linear_model.LogisticRegression(C=options.C)
             else:
                 clf = svm.LinearSVC()
-        
+            
+            if options.preprocess is not None:
+                pp=None
+                if options.preprocess=='StandardScaler':
+                    pp = preprocessing.StandardScaler()
+                elif options.preprocess=='Normalizer':
+                    pp = preprocessing.Normalizer()
+                else : # MinMax
+                    pp = preprocessing.MinMaxScaler()
+                clf=Pipeline([('options.preprocess',pp),(options.method,clf)])
+            
             clf.fit(training_X,training_Y)
         
         if options.debug: print(clf)
