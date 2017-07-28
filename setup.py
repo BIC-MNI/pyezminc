@@ -27,7 +27,10 @@ import os
 import sys
 
 # default location of minc library
-MINCDIR = '/opt/minc'
+# find location of minc-toolkit
+MINCDIR=os.environ.get('MINC_TOOLKIT',"/opt/minc/1.9.15")
+source_path=os.path.join(os.path.dirname(__file__), "../../src")
+
 MINCLIBS= ['minc2','z','m', 'minc_io'] 
 
 # A hack to allow user to specify location of minc
@@ -54,10 +57,17 @@ ext_modules=[ Extension(
 
 setup(
     name = 'pyezminc',
-    version = '1.1',
+    version = '1.2',
     url = 'https://github.com/BIC-MNI/pyezminc',
     author = 'Haz-Edine Assemlal',
     author_email = 'haz-edine@assemlal.com',
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "License :: OSI Approved :: BSD License",
+    ],
     cmdclass={'build_ext': build_ext },
     py_modules = ['minc'],
     ext_modules = ext_modules,
