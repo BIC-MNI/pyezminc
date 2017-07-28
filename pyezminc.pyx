@@ -650,7 +650,7 @@ def write_transform(output_xfm,trans):
             
             create_linear_transform(&x, &lin)
         else:
-            create_grid_transform_no_copy( &x, <VIO_Volume>NULL, <VIO_STR>t[2] ) 
+            create_grid_transform_no_copy( &x, <VIO_Volume>NULL, <char *>t[2] ) 
             #TODO: copy files (?)
         if t[1]:
             x.inverse_flag=1
