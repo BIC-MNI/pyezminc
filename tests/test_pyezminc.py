@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #  Copyright 2013, Haz-Edine Assemlal
 
 #  This file is part of PYEZMINC.
@@ -364,44 +362,5 @@ class TestMaskedImage(unittest.TestCase):
         self.assertAlmostEqual(ma.sum(self.masked_data), 269225069.77336735)
 
 
-
-
-def parse_options():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='Run the unit tests on the pynrx module')
-    parser.add_argument("--xml",
-                    action="store_true",
-                    dest="xml",
-                    default=False,
-                    help="xml report")
-    parser.add_argument('unittest_args', nargs='*')
-
-    options = parser.parse_args()
-    # Now set the sys.argv to the unittest_args (leaving sys.argv[0] alone)
-    sys.argv[1:] = options.unittest_args
-
-    return options
-
-
-def main(argv=None):
-    #import sys;sys.argv = ['', 'Test.testName']
-
-    options = parse_options()
-
-    print 'Using DATA from {0}'.format(DATA_PATH)
-    
-    suite = unittest.TestSuite()
-    suite.addTests(unittest.makeSuite(TestIterator))
-    suite.addTests(unittest.makeSuite(TestLabel))
-    suite.addTests(unittest.makeSuite(TestImage))
-    suite.addTests(unittest.makeSuite(TestMaskedImage))
-    #suite.addTests(doctest.DocTestSuite(name))
-
-#    if options.xml:
-#        unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))
-#    else:
-    results = unittest.TextTestRunner(verbosity = 2).run(suite)
-    return not results.wasSuccessful()
-
 if __name__ == "__main__":
-    sys.exit(main())
+    unittest.main()

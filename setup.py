@@ -15,7 +15,8 @@
 #  along with PYEZMINC.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from distutils.core import setup
+from setuptools import setup, find_packages
+
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
@@ -68,10 +69,12 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
         "License :: OSI Approved :: BSD License",
     ],
+    packages=find_packages(exclude=['test','tests*']),
     cmdclass={'build_ext': build_ext },
     py_modules = ['minc'],
     ext_modules = ext_modules,
-    license = 'GNU GPL v2'
+    license = 'GNU GPL v2',
+    test_suite="tests"
 )
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
