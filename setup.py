@@ -45,8 +45,8 @@ if '--mincdir' in sys.argv:
 
 
 ext_modules=[ Extension(
-                    "pyezminc",                                              # name of extension
-                    ["pyezminc.pyx", 'pyezminc.pxd','minc_1_iterators.cpp'], # our Cython source
+                    "minc.pyezminc",  # name of extension
+                    ["minc/pyezminc.pyx", "minc/pyezminc.pxd","minc/minc_1_iterators.cpp"], # our Cython source
                     libraries=MINCLIBS,
                     include_dirs = [os.path.join(MINCDIR,'include'),
                                     numpy.get_include()],
