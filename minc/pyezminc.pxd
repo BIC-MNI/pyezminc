@@ -234,28 +234,20 @@ cdef extern from "volume_io.h" :
     ctypedef double VIO_Transform_elem_type
     ctypedef void * VIO_Volume
     
-    cdef enum VIO_Status_t:
+    ctypedef enum VIO_Status:
         VIO_OK=0, VIO_ERROR, VIO_INTERNAL_ERROR, VIO_END_OF_FILE,VIO_QUIT
     
-    ctypedef VIO_Status_t VIO_Status
-
-    cdef enum VIO_Transform_types_t:
+    ctypedef enum VIO_Transform_types:
         LINEAR, THIN_PLATE_SPLINE, USER_TRANSFORM, CONCATENATED_TRANSFORM, GRID_TRANSFORM
 
-    ctypedef VIO_Transform_types_t VIO_Transform_types
-    
-    struct VIO_General_transform_t:
+    ctypedef struct VIO_General_transform:
         VIO_Transform_types  type
         VIO_BOOL             inverse_flag
         VIO_STR              displacement_volume_file 
     
-    ctypedef VIO_General_transform_t VIO_General_transform
-
-    struct VIO_Transform_t:
+    ctypedef struct VIO_Transform:
         VIO_Transform_elem_type    m[4][4]
 
-    ctypedef VIO_Transform_t VIO_Transform
-    
     VIO_Status input_transform_file(VIO_STR filename,VIO_General_transform *tfm)
     VIO_Transform_types get_transform_type(VIO_General_transform   *transform )
     VIO_Transform  * get_linear_transform_ptr(VIO_General_transform   *transform)
@@ -270,5 +262,22 @@ cdef extern from "volume_io.h" :
         VIO_STR                  displacement_volume_file )
     void  create_linear_transform(
        VIO_General_transform   *transform,
-       VIO_Transform           *linear_transform )                                           
+       VIO_Transform           *linear_transform )
+
+
+cdef extern from "xfm_param.h" :
+    int matrix_extract_linear_param(const double *in_matrix,
+                                 double *center,
+                                 double *translations,
+                                 double *scales,
+                                 double *shears,
+                                 double *rotations)
+
+    int linear_param_to_matrix(double *out_matrix,
+                               const double *center,
+                               const double *translations,
+                               const double *scales,
+                               const double *shears,
+                               const double *rotations)
+
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

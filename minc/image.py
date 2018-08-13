@@ -266,10 +266,11 @@ class Image(object):
     def voxel_to_world(self, voxel):
         dimensions = ('xspace', 'yspace', 'zspace')
         world_tmp = [voxel[i]*self.spacing()[i] + self.start()[i] for i in range(3)]
-        cosines = tuple(self._get_direction_cosines()[d] for d in dimensions)
+        _dir_cos = self._get_direction_cosines()
+        cosines = tuple(_dir_cos[d] for d in dimensions)
         cosines_transpose = np.transpose(np.asarray(cosines))
         world = []
-        for i in range(3):        
+        for i in range(3):
             world.append(sum(p*q for p,q in zip(world_tmp, cosines_transpose[i]))) 
         return world
 
@@ -391,8 +392,8 @@ class Image(object):
            return date
        raise Exception('Could not extract acquisition date from {0}'.format(self.name))
 
-    def compare(self, image):
-        return np.allclose(self.data, image.data)
+    def compare(self, image,rtol=1e-05, atol=1e-08):
+        return np.allclose(self.data, image.data, rtol=rtol, atol=atol)
 
     def toLabel(self):
         """Convert a copy of this instance as a Label instance.

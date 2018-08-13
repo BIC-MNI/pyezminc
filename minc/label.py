@@ -50,13 +50,13 @@ class Label(Image):
     def values(self, idx):
         '''Given a dictionary of coordinates, it returns
         a dictionary with associated values of each voxel'''
-        return dict((r, self.data[idx[r]]) for r in idx.iterkeys())
+        return dict((r, self.data[idx[r]]) for r in idx.keys())
 
     def set_values(self, idx, order=None):
         '''Given a coordinates dictionary, it writes the value
         for each region'''
         if order is None:
-            for k, v in idx.iteritems():
+            for k, v in idx.items():
                 self.data[v] = k
         else:
             for k in order:
@@ -71,14 +71,14 @@ class Label(Image):
     def regions_volume(self):
         '''Returns the volume for each region'''
         siz = self.regions_nbvoxels()
-        return dict((i, self.volume(siz[i])) for i in siz.iterkeys())
+        return dict((i, self.volume(siz[i])) for i in siz.keys())
 
 
     def split_regions(self, binary=False):
         '''Split regions id into separate Label instance'''
         indices = self.regions_indices()
         split = dict()
-        for i, idx in indices.iteritems():
+        for i, idx in indices.items():
             split[i] = Label(data=np.zeros(self.data.shape, dtype=self.dtype))
             if binary:
                 split[i].data[idx] = 1
@@ -98,7 +98,7 @@ class Label(Image):
         
         outLabel = Label(data=np.zeros(self.data.shape, dtype=self.dtype))
         
-        for i, idx in indices.iteritems():
+        for i, idx in indices.items():
             if i in label_dic.values():
                 outLabel.data[idx] = 1;
         
@@ -112,10 +112,10 @@ class Label(Image):
         idx_s = self.regions_indices()
         idx_r = reference.regions_indices()
         stats = dict()
-        for k_s,v_s in idx_s.iteritems():
+        for k_s,v_s in idx_s.items():
             tr_s = set(tuple(i) for i in np.transpose(v_s))
             stats[k_s] = dict()
-            for k_r,v_r in idx_r.iteritems():
+            for k_r,v_r in idx_r.items():
                 tr_r = set(tuple(i) for i in np.transpose(v_r))
                 inter = tr_s.intersection(tr_r)
                 if len(inter):
@@ -129,9 +129,9 @@ class Label(Image):
         stats = {'reference': dict(), 'self': dict()}
         ref_region_not_matched = set()
 
-        for k_s,v_s in inter.iteritems():
+        for k_s,v_s in inter.items():
             # Tuple reference labelname and size of intersection
-            len_inter = [(k, len(v)) for k,v in v_s.iteritems()]
+            len_inter = [(k, len(v)) for k,v in v_s.items()]
             # Filter regions which satisfy TRUE POSITIVe criteria
             bool_tp = np.array([i[1] for i in len_inter]) >= tp_min_size
 
@@ -161,7 +161,7 @@ class Label(Image):
         
         for i in reference.regions_id():
             tpFlag = False
-            for v in stats['self'].itervalues():
+            for v in stats['self'].values():
                 if v['type'] == 'TP':
                     if i in v['regions']:
                         tpFlag = True
@@ -211,8 +211,8 @@ class Label(Image):
         when compared to reference'''
         stats = self.error_type(reference, tp_min_size)
         summary = {'FN': len(stats['reference']),
-                   'FP': len([i for i in stats['self'].itervalues() if i['type']=='FP']),
-                   'TP': len([i for i in stats['self'].itervalues() if i['type']=='TP'])
+                   'FP': len([i for i in stats['self'].values() if i['type']=='FP']),
+                   'TP': len([i for i in stats['self'].values() if i['type']=='TP'])
                    }
         return summary
 
@@ -225,7 +225,7 @@ class Label(Image):
             stats = self.error_type(reference, tp_min_size)
         
         return dict((k, v['regions'])
-                    for k,v in stats['self'].iteritems() if v['type']=='TP')
+                    for k,v in stats['self'].items() if v['type']=='TP')
 
     def get_FP(self, reference, tp_min_size=1, voxelWise=False):
         '''Get a dictionary of all FP regions and their matching region'''
@@ -235,7 +235,7 @@ class Label(Image):
             stats = self.error_type(reference, tp_min_size)
             
         return dict((k, None)
-                    for k,v in stats['self'].iteritems() if v['type']=='FP')
+                    for k,v in stats['self'].items() if v['type']=='FP')
 
     def get_FN(self, reference, tp_min_size=1, voxelWise=False):
         '''Get a dictionary of all FN regions and their matching region'''
@@ -245,7 +245,7 @@ class Label(Image):
             stats = self.error_type(reference, tp_min_size)
             
         return dict((k, None)
-                    for k,v in stats['reference'].iteritems() if v['type']=='FN')
+                    for k,v in stats['reference'].items() if v['type']=='FN')
 
     def get_TN(self, reference, tp_min_size=1, voxelWise=False):
         '''Get a dictionary of all TN regions and their matching region'''
@@ -255,7 +255,7 @@ class Label(Image):
             stats = self.error_type(reference, tp_min_size)
             
         return dict((k, v['regions'])
-                    for k,v in stats['self'].iteritems() if v['type']=='TN')
+                    for k,v in stats['self'].items() if v['type']=='TN')
 
     def compare_volume_sympercents(self, label):
         '''Compare with another label. Return a tuple of regionwise and total percentage'''
@@ -265,7 +265,7 @@ class Label(Image):
         vol2 = label.regions_nbvoxels()
 
         sympct_regionwise = {}
-        for r1, lst in tp1.iteritems():
+        for r1, lst in tp1.items():
             r2 = lst[0]
             # Several regions overlapping
             if len(lst) > 1 or len(tp2[r2]) > 1:

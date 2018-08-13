@@ -198,7 +198,12 @@ cdef class EZMincWrapper(object):
 #        else:
 #            self.wrtptr.open(<char*?>fname, <minc_1_base>self.rdrptr[0])
         if history is not None:
-            self.wrtptr.append_history(<const char*?>history)
+            if isinstance(history, basestring):
+                self.wrtptr.append_history(<const char*?>history)
+            else: # assume it's a list
+                for i in history:
+                    self.wrtptr.append_history(<const char*?>i)
+
         self.__setup_write(dtype=dtype)
         self.__save_standard_volume(dtype=dtype)
         #(<minc_1_base*>self.wrtptr).close()
@@ -323,10 +328,12 @@ cdef class input_iterator_real(object):
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
-            return self.value()
+            v=self.value()
+            self._it.next()
+            return v
 
     def begin(self):
         self._it.begin()
@@ -374,10 +381,12 @@ cdef class input_iterator_int(object):
         return self
 
     def __next__(self):
-        if not self._it.next():
+        if self._it.last():
             raise StopIteration
         else:
-            return self.value()
+            v=self.value()
+            self._it.next()
+            return v
 
     def begin(self):
         self._it.begin()
@@ -398,27 +407,20 @@ cdef class output_iterator_real(object):
     cdef minc_output_iterator[float] * _it
     cdef minc_1_writer *wrtptr
 
-    def __cinit__(self,file=None,reference=None):
-        if reference is not None:
-            self.wrtptr = new minc_1_writer()
-            self.wrtptr.open(<char*?>file,<char*?>reference)
-            self.wrtptr.setup_write_float()
-            self._it = new minc_output_iterator[float](self.wrtptr[0])
-            self._it.begin()
-        else:
-            self.wrtptr = NULL
-            self._it = NULL
+    def __cinit__(self,file=None, reference=None, reference_file=None):
+        self.open(file, reference=reference, reference_file=reference_file)
 
-    def open(self,file,input_iterator_real reference=None,reference_file=None):
+    def open(self,file,input_iterator_real reference=None, reference_file=None):
         if self._it != NULL:
             del self._it
         if self.wrtptr != NULL:
             del self.wrtptr
         self.wrtptr = new minc_1_writer()
+
         if reference is not None:
-            self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+            self.wrtptr.open(<char*?>file, reference.rdrptr[0])
         else:
-            self.wrtptr.open(<char*?>file,<char*?>reference_file)
+            self.wrtptr.open(<char*?>file, <char*?>reference_file)
             
         self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[float](self.wrtptr[0])
@@ -440,7 +442,7 @@ cdef class output_iterator_real(object):
     def last(self):
         return self._it.last()
 
-    def value(self,float value):
+    def value(self, float value):
         self._it.value(value)
 
     def __dealloc__ (self):
@@ -458,16 +460,8 @@ cdef class output_iterator_int(object):
     cdef minc_output_iterator[int] * _it
     cdef minc_1_writer *wrtptr
 
-    def __cinit__(self,file=None,reference=None):
-        if reference is not None:
-            self.wrtptr = new minc_1_writer()
-            self.wrtptr.open(<char*?>file,<char*?>reference)
-            self.wrtptr.setup_write_int()
-            self._it = new minc_output_iterator[int](self.wrtptr[0])
-            self._it.begin()
-        else:
-            self.wrtptr = NULL
-            self._it = NULL
+    def __cinit__(self,file=None, reference=None, reference_file=None):
+        self.open(file, reference=reference, reference_file=reference_file)
 
     def open(self,file,input_iterator_int reference=None,reference_file=None):
         if self._it != NULL:
@@ -603,8 +597,7 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
     
     if _tt==LINEAR:
         lin=get_linear_transform_ptr(_xfm);
-        # parameterArray.SetElement(i+j*3, Transform_elem(*lin,j,i));
-        #print("Grid transform: {} Invert:{}".format('4x4',_xfm.inverse_flag))
+
         x = np.empty([4,4],dtype=np.float)
         for i in range(4):
             for j in range(4):
@@ -622,9 +615,9 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
             transforms.extend(read_one_transform(get_nth_general_transform(_xfm, i)))
         return transforms
     else:
-        raise Exception('Unsupoorted transformation type')
-    
-    
+        raise Exception('Unsupoorted transformation type:{}'.format(_tt))
+
+
 def read_transform(input_xfm):
     cdef VIO_General_transform _xfm
     if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
@@ -634,7 +627,7 @@ def read_transform(input_xfm):
     return x
     
     
-def write_transform(output_xfm,trans):
+def write_transform(output_xfm, trans, comment=None):
     cdef VIO_General_transform _xfm
     cdef VIO_General_transform x
     cdef VIO_Transform lin
@@ -662,7 +655,8 @@ def write_transform(output_xfm,trans):
             _xfm=concated
         else:
             _xfm=x
-    comment="PyEZMINC {}".format(repr(trans))
+    if comment is None:
+        comment="PyEZMINC {}".format(repr(trans))
     wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm);
     delete_general_transform(&_xfm);
 

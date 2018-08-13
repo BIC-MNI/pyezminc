@@ -19,7 +19,7 @@ from setuptools import setup, find_packages
 
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
-from Cython.Build import cythonize
+#from Cython.Build import cythonize
 
 import numpy
 import os
@@ -47,7 +47,9 @@ if '--mincdir' in sys.argv:
 
 ext_modules=[ Extension(
                     "minc.pyezminc",  # name of extension
-                    ["minc/pyezminc.pyx", "minc/pyezminc.pxd","minc/minc_1_iterators.cpp"], # our Cython source
+                    ["minc/pyezminc.pyx", "minc/pyezminc.pxd",
+                     "minc/minc_1_iterators.cpp","minc/xfm_param.cpp",
+                     "minc/matrix-ops.cpp"], # our Cython source
                     libraries=MINCLIBS,
                     include_dirs = [os.path.join(MINCDIR,'include'),
                                     numpy.get_include()],
@@ -69,12 +71,13 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
         "License :: OSI Approved :: BSD License",
     ],
-    packages=find_packages(exclude=['test','tests*']),
+    install_requires = ["numpy","Cython"],
+    packages=find_packages(exclude=['test']),
     cmdclass={'build_ext': build_ext },
     py_modules = ['minc'],
     ext_modules = ext_modules,
     license = 'GNU GPL v2',
-    test_suite="tests"
+    test_suite="test"
 )
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
