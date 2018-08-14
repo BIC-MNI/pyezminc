@@ -377,6 +377,152 @@ class TestMaskedImage(unittest.TestCase):
     def testSum(self):
         self.assertAlmostEqual(ma.sum(self.masked_data), 12050265.41,places=2)
 
+class TestXFM(unittest.TestCase):
+    def setUp(self):
+        self.tmp = create_tmp_filename(prefix='transform', suffix='.xfm', remove=True)
+
+    def tearDown(self):
+        if os.path.isfile(self.tmp):
+            os.remove(self.tmp)
+
+    def testXfmRead(self):
+        # generate xfm file first
+        check_call_out(["param2xfm","-rotations","30","0","0",self.tmp,"-clobber"])
+        xfm=minc.read_xfm(self.tmp)
+        #print(xfm)
+        reference_matrix=np.array([
+             [1.0, 0.0, 0.0, 0.0],
+             [0.0, 0.866025388240814, -0.5, 0.0],
+             [0.0, 0.5, 0.866025388240814, 0.0],
+             [0.0, 0.0, 0.0, 1.0 ]
+            ])
+        self.assertTrue(len(xfm) == 1)
+        self.assertTrue(xfm[0].lin)
+        self.assertTrue(np.allclose(reference_matrix, xfm[0].trans))
+
+    def testXfmWrite(self):
+        # generate xfm file first
+        reference_matrix=np.array([
+             [1.0, 0.0, 0.0, 0.0],
+             [0.0, 0.866025388240814, -0.5, 0.0],
+             [0.0, 0.5, 0.866025388240814, 0.0],
+             [0.0, 0.0, 0.0, 1.0 ]
+            ])
+        reference_transform=[minc.xfm_entry(True,False,reference_matrix)]
+        minc.write_xfm(self.tmp, reference_transform, 'Reference')
+
+        with open(self.tmp,'r') as f:
+            ln=f.read()
+
+        ref_ln="""MNI Transform File
+%Reference
+
+Transform_Type = Linear;
+Linear_Transform =
+ 1 0 0 0
+ 0 0.866025388240814 -0.5 0
+ 0 0.5 0.866025388240814 0;
+"""
+        self.assertEqual(ln,ref_ln)
+
+    def testXfmToParam(self) :
+        def compare_parameters(par,ref):
+            if not np.allclose(ref.rotations, par.rotations):
+                print("rotations mismatch:",ref.rotations, par.rotations)
+                return False
+            if not np.allclose(ref.translations, par.translations):
+                print("translations mismatch:",ref.translations, par.translations)
+                return False
+            if not np.allclose(ref.scales, par.scales):
+                print("scales mismatch:",ref.translations, par.translations)
+                return False
+            if not np.allclose(ref.translations, par.translations):
+                print("translations mismatch:",ref.translations, par.translations)
+                return False
+            if not np.allclose(ref.shears, par.shears):
+                print("shears mismatch:",ref.shears, par.shears)
+                return False
+            return True
+
+        for i in range(3):
+            for r in [-10, -10,  10, 20]:
+                ref = minc.xfm_identity_transform_par()
+                ref.rotations[i] = r
+                cmd=["param2xfm", "-rotations"]+[str(j) for j in ref.rotations]+[self.tmp, "-clobber"]
+
+                check_call_out(cmd)
+                par = minc.xfm_to_param(minc.read_xfm(self.tmp))
+
+                self.assertTrue(compare_parameters(ref,par),"Error in rotations i={} r={}".format(i,r))
+
+        for i in range(3):
+            for r in [-10, -10,  10, 20]:
+                ref = minc.xfm_identity_transform_par()
+                ref.translations[i] = r
+                cmd=["param2xfm", "-translation"]+[str(j) for j in ref.translations]+[self.tmp, "-clobber"]
+
+                check_call_out(cmd)
+                par = minc.xfm_to_param(minc.read_xfm(self.tmp))
+
+                self.assertTrue(compare_parameters(ref,par),"Error in translations i={} r={}".format(i,r))
+
+        for i in range(3):
+            for r in [0.9, 1.1,  1.2, 1.3]:
+                ref = minc.xfm_identity_transform_par()
+                ref.scales[i] = r
+                cmd=["param2xfm", "-scales"]+[str(j) for j in ref.scales]+[self.tmp, "-clobber"]
+
+                check_call_out(cmd)
+                par = minc.xfm_to_param(minc.read_xfm(self.tmp))
+
+                self.assertTrue(compare_parameters(ref,par),"Error in scales i={} r={}".format(i,r))
+
+    def testParamToXFM(self) :
+        def compare_matrices(par, ref):
+            if not np.allclose(par,ref):
+                print("Matrix mismatch:", ref, par)
+                return False
+            return True
+
+        ref = minc.xfm_identity_transform_par()
+        par_mat = minc.param_to_xfm(ref)
+
+        for i in range(3):
+            for r in [-10, -10,  10, 20]:
+                ref = minc.xfm_identity_transform_par()
+                ref.translations[i] = r
+                cmd=["param2xfm", "-translation"] + [str(j) for j in ref.translations] + [self.tmp, "-clobber"]
+                check_call_out(cmd)
+                ref_mat = minc.read_xfm(self.tmp)
+                par_mat = minc.param_to_xfm(ref)
+                self.assertTrue(par_mat.lin)
+                self.assertFalse(par_mat.inv)
+                self.assertTrue( compare_matrices(par_mat.trans, ref_mat[0].trans),"Error in translations i={} r={}".format(i,r))
+
+        for i in range(3):
+            for r in [-10, -10,  10, 20]:
+                ref = minc.xfm_identity_transform_par()
+                ref.rotations[i] = r
+                cmd=["param2xfm", "-rotations"]+[str(j) for j in ref.rotations]+[self.tmp, "-clobber"]
+                check_call_out(cmd)
+                ref_mat=minc.read_xfm(self.tmp)
+                par_mat=minc.param_to_xfm(ref)
+                self.assertTrue(par_mat.lin)
+                self.assertFalse(par_mat.inv)
+                self.assertTrue( compare_matrices(par_mat.trans, ref_mat[0].trans),"Error in rotations i={} r={}".format(i,r))
+
+
+        for i in range(3):
+            for r in [0.9, 1.1,  1.2, 1.3]:
+                ref = minc.xfm_identity_transform_par()
+                ref.scales[i] = r
+                cmd=["param2xfm", "-scales"]+[str(j) for j in ref.scales]+[self.tmp, "-clobber"]
+                check_call_out(cmd)
+                ref_mat=minc.read_xfm(self.tmp)
+                par_mat=minc.param_to_xfm(ref)
+                self.assertTrue(par_mat.lin)
+                self.assertFalse(par_mat.inv)
+                self.assertTrue( compare_matrices(par_mat.trans,ref_mat[0].trans),"Error in scales i={} r={}".format(i,r))
 
 if __name__ == "__main__":
     unittest.main()

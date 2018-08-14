@@ -62,7 +62,7 @@ int matrix_extract_linear_param( double *in_matrix,
   /* convert 4D raw matrix into MINC world */
   for(i=0;i<4;i++) {
     for(j=0;j<4;j++) {
-        lin.m[j][i]=in_matrix[i+j*4];
+        lin.m[j][i]=in_matrix[i*4+j];
       }}
 
     return extract2_parameters_from_matrix(&lin,
@@ -90,7 +90,7 @@ int linear_param_to_matrix(double *out_matrix,
 
   for(i=0;i<4;i++) {
     for(j=0;j<4;j++) {
-        out_matrix[i+j*4]=lin.m[j][i];
+        out_matrix[i*4+j]=lin.m[j][i];
         }}
 
   return 0;

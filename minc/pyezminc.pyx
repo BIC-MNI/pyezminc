@@ -23,6 +23,9 @@ from array   import  array
 # Import the Python-level symbols of numpy
 import numpy as np
 
+# namedtuple support
+from collections import namedtuple
+
 # Import the C-level symbols of numpy
 cimport numpy as np
 
@@ -589,6 +592,23 @@ cdef class parallel_output_iterator:
     def progress(self):
         return self._it.progress()
 
+xfm_entry=namedtuple('xfm_entry',['lin','inv','trans'])
+xfm_param=namedtuple('xfm_param',['center','translations','rotations','scales','shears'])
+
+def xfm_identity_transform_par():
+    return xfm_param(np.zeros(3, 'float64','C'),
+                     np.zeros(3, 'float64','C'),
+                     np.zeros(3, 'float64','C'),
+                     np.ones (3, 'float64','C'),
+                     np.zeros(3, 'float64','C'))
+
+def xfm_identity_transform_mat():
+    return np.eye(4)
+
+def xfm_identity():
+    return xfm_entry(True,False,xfm_identity_transform_mat)
+
+
 cdef object read_one_transform(VIO_General_transform * _xfm):
     cdef VIO_Transform_types _tt
     cdef VIO_Transform *lin
@@ -596,38 +616,38 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
     _tt=get_transform_type(_xfm)
     
     if _tt==LINEAR:
-        lin=get_linear_transform_ptr(_xfm);
+        lin = get_linear_transform_ptr(_xfm);
 
-        x = np.empty([4,4],dtype=np.float)
+        x = np.zeros((4,4), 'float64','C')
+
         for i in range(4):
             for j in range(4):
                 x[i,j]=lin.m[j][i]
 
-        return [ (True, (_xfm.inverse_flag==1), np.asmatrix(x) )]
+        return [xfm_entry(True, (_xfm.inverse_flag==1), x)]
         
     elif _tt==GRID_TRANSFORM:
-        #print("Grid transform: {} Invert:{}".format(_xfm.displacement_volume_file, _xfm.inverse_flag))
-        return [ (False, (_xfm.inverse_flag==1), _xfm.displacement_volume_file )]
+        return [xfm_entry(False, (_xfm.inverse_flag==1), _xfm.displacement_volume_file )]
         
     elif _tt==CONCATENATED_TRANSFORM:
         transforms=[]
         for i in range( get_n_concated_transforms(_xfm)):
-            transforms.extend(read_one_transform(get_nth_general_transform(_xfm, i)))
+            transforms.extend( read_one_transform(get_nth_general_transform(_xfm, i)) )
         return transforms
     else:
         raise Exception('Unsupoorted transformation type:{}'.format(_tt))
 
 
-def read_transform(input_xfm):
+def read_xfm(input_xfm):
     cdef VIO_General_transform _xfm
     if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
         raise Exception('Unable to open {}'.format(input_xfm))
-    x= read_one_transform(&_xfm)
+    x=read_one_transform(&_xfm)
     delete_general_transform(&_xfm)
     return x
-    
-    
-def write_transform(output_xfm, trans, comment=None):
+
+
+def write_xfm(output_xfm, trans, comment=None):
     cdef VIO_General_transform _xfm
     cdef VIO_General_transform x
     cdef VIO_Transform lin
@@ -635,17 +655,16 @@ def write_transform(output_xfm, trans, comment=None):
     cdef VIO_Status wrt 
     
     for (k,t) in enumerate(trans):
-        if t[0]: # it's linear transform
-            
+        if t.lin: # it's linear transform
             for i in range(4):
                 for j in range(4):
-                    lin.m[j][i]=t[2][i,j]
+                    lin.m[j][i]=t.trans[i,j]
             
             create_linear_transform(&x, &lin)
         else:
-            create_grid_transform_no_copy( &x, <VIO_Volume>NULL, <char *>t[2] ) 
+            create_grid_transform_no_copy( &x, <VIO_Volume>NULL, <char *>t.trans )
             #TODO: copy files (?)
-        if t[1]:
+        if t.inv:
             x.inverse_flag=1
         else:
             x.inverse_flag=0
@@ -657,10 +676,58 @@ def write_transform(output_xfm, trans, comment=None):
             _xfm=x
     if comment is None:
         comment="PyEZMINC {}".format(repr(trans))
-    wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm);
-    delete_general_transform(&_xfm);
+    wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm)
+    delete_general_transform(&_xfm)
 
     if wrt!=VIO_OK:
         raise Exception('Unable to write {}'.format(output_xfm))
+
+def xfm_to_param(trans):
+    cdef np.ndarray tt=None
+    inv=False
+
+    if isinstance(trans, np.ndarray):
+        tt=np.asarray(trans,'float64','C')
+    if isinstance(trans, np.matrix):
+        tt=np.asarray(trans,'float64','C')
+    elif isinstance(trans, list):
+        if len(trans)!=1:
+            raise Exception('xfm_to_param supports a single transform only')
+        if not trans[0].lin:
+            raise Exception('xfm_to_param supports a linear transform only')
+        tt=np.asarray(trans[0].trans,'float64','C')
+        inv=trans[0].inv
+
+    if inv:
+        tt=np.linalg.inv(tt)
+
+    cdef np.ndarray center=np.zeros(3,'float64','C')
+    cdef np.ndarray translations=np.zeros(3,'float64','C')
+    cdef np.ndarray rotations=np.zeros(3,'float64','C')
+    cdef np.ndarray scales=np.zeros(3,'float64','C')
+    cdef np.ndarray shears=np.zeros(3,'float64','C')
+
+    if matrix_extract_linear_param(<double*> tt.data, <double*> center.data, <double*> translations.data, <double*> scales.data, <double*> shears.data, <double*> rotations.data)!=0:
+        raise Exception('xfm_to_param transformation failed')
+
+    rotations*=180.0/3.1415927
+
+    return xfm_param(center, translations, rotations, scales, shears)
+
+def param_to_xfm(par):
+    cdef np.ndarray center=np.asarray(par.center,'float64','C')
+    cdef np.ndarray translations=np.asarray(par.translations,'float64','C')
+    cdef np.ndarray rotations=np.asarray(par.rotations,'float64','C').copy()
+    cdef np.ndarray scales=np.asarray(par.scales,'float64','C')
+    cdef np.ndarray shears=np.asarray(par.shears,'float64','C')
+
+    cdef np.ndarray tt = np.zeros((4,4), 'float64','C')
+
+    rotations*=3.1415927/180.0
+
+    if linear_param_to_matrix(<double*> tt.data, <double*>center.data, <double*>translations.data, <double*>scales.data, <double*>shears.data,<double*>rotations.data)!=0:
+        raise Exception('param_to_xfm transformation failed')
+
+    return xfm_entry(True, False, tt)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

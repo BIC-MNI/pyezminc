@@ -266,7 +266,7 @@ cdef extern from "volume_io.h" :
 
 
 cdef extern from "xfm_param.h" :
-    int matrix_extract_linear_param(const double *in_matrix,
+    int matrix_extract_linear_param(double *in_matrix,
                                  double *center,
                                  double *translations,
                                  double *scales,
@@ -274,10 +274,10 @@ cdef extern from "xfm_param.h" :
                                  double *rotations)
 
     int linear_param_to_matrix(double *out_matrix,
-                               const double *center,
-                               const double *translations,
-                               const double *scales,
-                               const double *shears,
-                               const double *rotations)
+                               double *center,
+                               double *translations,
+                               double *scales,
+                               double *shears,
+                               double *rotations)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python
