@@ -377,6 +377,7 @@ class TestMaskedImage(unittest.TestCase):
     def testSum(self):
         self.assertAlmostEqual(ma.sum(self.masked_data), 12050265.41,places=2)
 
+
 class TestXFM(unittest.TestCase):
     def setUp(self):
         self.tmp = create_tmp_filename(prefix='transform', suffix='.xfm', remove=True)

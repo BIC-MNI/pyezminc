@@ -606,8 +606,7 @@ def xfm_identity_transform_mat():
     return np.eye(4)
 
 def xfm_identity():
-    return xfm_entry(True,False,xfm_identity_transform_mat)
-
+    return xfm_entry(True, False, xfm_identity_transform_mat())
 
 cdef object read_one_transform(VIO_General_transform * _xfm):
     cdef VIO_Transform_types _tt
@@ -622,7 +621,7 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
 
         for i in range(4):
             for j in range(4):
-                x[i,j]=lin.m[j][i]
+                x[i,j] = lin.m[j][i]
 
         return [xfm_entry(True, (_xfm.inverse_flag==1), x)]
         
@@ -637,7 +636,6 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
     else:
         raise Exception('Unsupoorted transformation type:{}'.format(_tt))
 
-
 def read_xfm(input_xfm):
     cdef VIO_General_transform _xfm
     if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
@@ -645,7 +643,6 @@ def read_xfm(input_xfm):
     x=read_one_transform(&_xfm)
     delete_general_transform(&_xfm)
     return x
-
 
 def write_xfm(output_xfm, trans, comment=None):
     cdef VIO_General_transform _xfm
@@ -729,5 +726,41 @@ def param_to_xfm(par):
         raise Exception('param_to_xfm transformation failed')
 
     return xfm_entry(True, False, tt)
+
+def check_xfm_components(trans, eps=1e-6):
+    """
+    Checks XFM transform for non-identity linear transforms and non-linear transforms
+    :param trans:
+    :return: tuple N_lin,N_nl  -
+    """
+    _identity = xfm_identity_transform_mat()
+    _N_lin = 0
+    _N_nl = 0
+    for i,j in enumerate(trans):
+        if j.lin and np.linalg.norm(j.trans-_identity)>=eps:
+            _N_lin +=1
+        elif not j.lin :
+            _N_nl +=1
+
+    return _N_lin,_N_nl
+
+def reduce_xfm_components(trans, eps=1e-6):
+    """
+    Removes identity transforms
+    :param trans:
+    :param eps:
+    :return: transform object with identity parts removed, still returns identity transforms if input is identity
+    """
+    _identity = xfm_identity_transform_mat()
+    _out = []
+    for i,j in enumerate(trans):
+        if j.lin and np.linalg.norm(j.trans-_identity)>=eps:
+            _out += j
+        elif not j.lin :
+            _out += j
+    if len(_out)==0:
+        _out=[xfm_identity()]
+    return _out
+
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;hl python

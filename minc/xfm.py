@@ -100,7 +100,6 @@ class XFM(object):
             self._set_parameters()
         write_xfm(output_xfm_name, self.xfm, comments=self.history)
 
-
     @property
     def center(self):
         if not self.parameter_extracted:
