@@ -753,13 +753,16 @@ def reduce_xfm_components(trans, eps=1e-6):
     """
     _identity = xfm_identity_transform_mat()
     _out = []
+
     for i,j in enumerate(trans):
         if j.lin and np.linalg.norm(j.trans-_identity)>=eps:
-            _out += j
+            _out.append(j)
         elif not j.lin :
-            _out += j
+            _out.append(j)
+
     if len(_out)==0:
         _out=[xfm_identity()]
+
     return _out
 
 

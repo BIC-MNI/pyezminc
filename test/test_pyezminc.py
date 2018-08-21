@@ -525,6 +525,17 @@ Linear_Transform =
                 self.assertFalse(par_mat.inv)
                 self.assertTrue( compare_matrices(par_mat.trans,ref_mat[0].trans),"Error in scales i={} r={}".format(i,r))
 
+    def test_xfm_components(self):
+        # TODO: add a test with nonlinear component
+        check_call_out(["param2xfm", "-rotations", "30", "0", "0", self.tmp,"-clobber"])
+        x=minc.read_xfm(self.tmp)
+        N_lin, N_nl = minc.check_xfm_components(x)
+        self.assertEqual(N_lin, 1)
+        self.assertEqual(N_nl, 0)
+        r=minc.reduce_xfm_components(x)
+        self.assertEqual(r, x)
+
+
 if __name__ == "__main__":
     unittest.main()
 
