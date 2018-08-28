@@ -188,7 +188,7 @@ cdef class EZMincWrapper(object):
 
     def load(self, fname=None, dtype=None, positive_directions=False, metadata_only=False, rw=False):
         ''' Load the mincfile into a numpy array'''
-        self.rdrptr.open(<bytes>fname, positive_directions, metadata_only, rw)
+        self.rdrptr.open(<char*?>fname, positive_directions, metadata_only, rw)
         self.minc_datatype = (<minc_1_base*>self.rdrptr).datatype()
         if not metadata_only:
             self.__init_ndarray(dtype=dtype)
@@ -285,8 +285,7 @@ cdef class EZMincWrapper(object):
                 elif attrtype == NC_DOUBLE:
                     attrvalue = (<minc_1_base*>self.rdrptr).att_value_double(varname.c_str(), attrname.c_str())
                 else:
-                    raise Exception('attribute type not recognized', 
-                                    varname, attrname, attrtype)
+                    raise Exception('attribute type not recognized:{} {} {}'.format(varname, attrname, attrtype))
 
                 if debug:
                     print "{0}:{1} = '{2}' ({3})".format(varname,attrname,attrvalue,attrtype)
