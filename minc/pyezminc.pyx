@@ -188,6 +188,7 @@ cdef class EZMincWrapper(object):
 
     def load(self, fname=None, dtype=None, positive_directions=False, metadata_only=False, rw=False):
         ''' Load the mincfile into a numpy array'''
+        fname = fname.encode('UTF-8') if fname is not None else None
         self.rdrptr.open(<char*?>fname, positive_directions, metadata_only, rw)
         self.minc_datatype = (<minc_1_base*>self.rdrptr).datatype()
         if not metadata_only:
@@ -196,25 +197,30 @@ cdef class EZMincWrapper(object):
     
     def save(self, fname=None, imitate=None, dtype=None, history=None):
         ''' Write a numpy array in a mincfile'''
+        fname = fname.encode('UTF-8') if fname is not None else None
+        imitate = imitate.encode('UTF-8') if imitate is not None else None
+
         self.wrtptr.open(<char*?>fname, <char*?>imitate)
 # Works but then the rdrptr destructor fails
 #        else:
 #            self.wrtptr.open(<char*?>fname, <minc_1_base>self.rdrptr[0])
         if history is not None:
             if isinstance(history, basestring):
+                history = history.encode('UTF-8') if history is not None else None
                 self.wrtptr.append_history(<const char*?>history)
             else: # assume it's a list
                 for i in history:
-                    self.wrtptr.append_history(<const char*?>i)
+                    i_ = i.encode('UTF-8')
+                    self.wrtptr.append_history(<const char*?>i_)
 
         self.__setup_write(dtype=dtype)
         self.__save_standard_volume(dtype=dtype)
-        #(<minc_1_base*>self.wrtptr).close()
         del self.wrtptr
         self.wrtptr = new minc_1_writer()
     
     def append_history(self, comment):
         ''' Append history to the mincfile'''
+        comment = comment.encode('UTF-8') if comment is not None else None
         self.wrtptr.append_history(<char*?>comment)
     
     def is_signed(self):
@@ -305,6 +311,7 @@ cdef class input_iterator_real(object):
     cdef minc_1_reader *rdrptr
 
     def __cinit__(self,file=None):
+        file = file.encode('UTF-8') if file is not None else None
         if file is not None:
             self.rdrptr = new minc_1_reader()
             self.rdrptr.open(<char*?>file)
@@ -316,6 +323,7 @@ cdef class input_iterator_real(object):
             self.rdrptr = NULL
     
     def open(self,file):
+        file = file.encode('UTF-8') if file is not None else None
         if self._it != NULL:
             del self._it
         if self.rdrptr != NULL:
@@ -358,6 +366,7 @@ cdef class input_iterator_int(object):
     cdef minc_1_reader *rdrptr
 
     def __cinit__(self,file=None):
+        file = file.encode('UTF-8') if file is not None else None
         if file is not None:
             self.rdrptr = new minc_1_reader()
             self.rdrptr.open(<char*?>file)
@@ -369,6 +378,7 @@ cdef class input_iterator_int(object):
             self.rdrptr = NULL
     
     def open(self,file):
+        file = file.encode('UTF-8') if file is not None else None
         if self._it != NULL:
             del self._it
         if self.rdrptr != NULL:
@@ -413,6 +423,8 @@ cdef class output_iterator_real(object):
         self.open(file, reference=reference, reference_file=reference_file)
 
     def open(self,file,input_iterator_real reference=None, reference_file=None):
+        file = file.encode('UTF-8') if file is not None else None
+        reference_file = reference_file.encode('UTF-8') if reference_file is not None else None
         if self._it != NULL:
             del self._it
         if self.wrtptr != NULL:
@@ -466,6 +478,8 @@ cdef class output_iterator_int(object):
         self.open(file, reference=reference, reference_file=reference_file)
 
     def open(self,file,input_iterator_int reference=None,reference_file=None):
+        file = file.encode('UTF-8') if file is not None else None
+        reference_file = reference_file.encode('UTF-8') if reference_file is not None else None
         if self._it != NULL:
             del self._it
         if self.wrtptr != NULL:
@@ -637,6 +651,7 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
 
 def read_xfm(input_xfm):
     cdef VIO_General_transform _xfm
+    input_xfm = input_xfm.encode('UTF-8')
     if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
         raise Exception('Unable to open {}'.format(input_xfm))
     x=read_one_transform(&_xfm)
@@ -648,8 +663,11 @@ def write_xfm(output_xfm, trans, comment=None):
     cdef VIO_General_transform x
     cdef VIO_Transform lin
     cdef VIO_General_transform concated
-    cdef VIO_Status wrt 
-    
+    cdef VIO_Status wrt
+
+    output_xfm = output_xfm.encode('UTF-8')
+    comment = comment.encode('UTF-8') if comment is not None else None
+
     for (k,t) in enumerate(trans):
         if t.lin: # it's linear transform
             for i in range(4):
@@ -672,7 +690,7 @@ def write_xfm(output_xfm, trans, comment=None):
             _xfm=x
     if comment is None:
         comment="PyEZMINC {}".format(repr(trans))
-    wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm)
+    wrt = output_transform_file(<char*?>output_xfm,<char*?>comment,<VIO_General_transform*>&_xfm)
     delete_general_transform(&_xfm)
 
     if wrt!=VIO_OK:

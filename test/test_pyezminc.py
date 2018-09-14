@@ -102,7 +102,7 @@ def check_call_out(command, cwd=None, autosplit=True, shell=False, verbose=False
     finally:
         if not logFile:
             fpipe.close()
-
+    
     return buf
 
 
