@@ -27,6 +27,9 @@ import shlex
 
 import minc
 
+from six import string_types
+
+
 DATA_PATH =    'test/data'
 ANAT_FILE =    'mri_t1.mnc'
 ANAT_FILE_T2 = 'mri_t2.mnc'
@@ -50,14 +53,14 @@ def check_call_out(command, cwd=None, autosplit=True, shell=False, verbose=False
     :rtype: string
     :raises: subprocess.CalledProcessError if the command does not return 0.
     """
-    if autosplit and not shell and isinstance(command, basestring):
+    if autosplit and not shell and isinstance(command, string_types):
         command = shlex.split(command)
 
     if verbose:
-        if isinstance(command, basestring):
-            print command
+        if isinstance(command, string_types):
+            print( command )
         else:
-            print string.join(command, sep=' ')
+            print( string.join(command, sep=' ') )
 
     if not logFile:
         fpipe = tempfile.NamedTemporaryFile()
@@ -81,7 +84,7 @@ def check_call_out(command, cwd=None, autosplit=True, shell=False, verbose=False
                 logFile.seek(0)
                 buf = logFile.read()
     except OSError as e:
-        if isinstance(command, basestring):
+        if isinstance(command, string_types):
             command = shlex.split(command)
         e.filename = command[0]
         raise e
@@ -92,8 +95,8 @@ def check_call_out(command, cwd=None, autosplit=True, shell=False, verbose=False
 
             if print_exception:
                 if not verbose:
-                    print command
-                print buf
+                    print( command )
+                print( buf )
             e.output = buf
         raise e    
     finally:
