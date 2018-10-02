@@ -249,9 +249,11 @@ class Image(object):
 
     def volume(self, nb_voxels):
         '''Given a number of voxels, it returns the volume.'''
-        one_voxel_cc = [self.__wrapper.nspacing(i)
-                        for i in range(1,self.__wrapper.nb_dim()+1)]
-        return nb_voxels * reduce(mul, one_voxel_cc)
+        one_voxel_cc = 1.0
+        for i in range(1, self.__wrapper.nb_dim() + 1):
+            one_voxel_cc*=self.__wrapper.nspacing(i)
+        return nb_voxels * one_voxel_cc
+
 
     def _get_direction_cosines(self):
         dimensions = ('xspace', 'yspace', 'zspace')
