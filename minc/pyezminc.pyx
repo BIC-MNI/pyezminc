@@ -23,6 +23,9 @@ from array   import  array
 # Import the Python-level symbols of numpy
 import numpy as np
 
+# compatibility
+import six
+
 # namedtuple support
 from collections import namedtuple
 
@@ -61,6 +64,16 @@ nctype_to_numpy = {NC_BYTE   : {True:np.int8,    False:np.uint8},
                    NC_DOUBLE : {True:np.float64, False:np.float64},
                    }  
 
+# define a global name for whatever char type is used in the module
+ctypedef unsigned char char_type
+
+cdef  _chars(s):
+    if isinstance(s, unicode):
+        # encode to the specific encoding used inside of the module
+        s_ = (<unicode>s).encode('utf8')
+    else:
+        s_ = s
+    return s_
 
 cdef class EZMincWrapper(object):
     '''
@@ -188,7 +201,8 @@ cdef class EZMincWrapper(object):
 
     def load(self, fname=None, dtype=None, positive_directions=False, metadata_only=False, rw=False):
         ''' Load the mincfile into a numpy array'''
-        self.rdrptr.open(<char*?>fname, positive_directions, metadata_only, rw)
+        _fname = _chars(fname) if fname is not None else None
+        self.rdrptr.open(<char*?>_fname, positive_directions, metadata_only, rw)
         self.minc_datatype = (<minc_1_base*>self.rdrptr).datatype()
         if not metadata_only:
             self.__init_ndarray(dtype=dtype)
@@ -196,16 +210,20 @@ cdef class EZMincWrapper(object):
     
     def save(self, fname=None, imitate=None, dtype=None, history=None):
         ''' Write a numpy array in a mincfile'''
-        self.wrtptr.open(<char*?>fname, <char*?>imitate)
+        _fname = _chars(fname) if fname is not None else None
+        _imitate = _chars(imitate) if imitate is not None else None
+        self.wrtptr.open(<char*?>_fname, <char*?>_imitate)
 # Works but then the rdrptr destructor fails
 #        else:
 #            self.wrtptr.open(<char*?>fname, <minc_1_base>self.rdrptr[0])
         if history is not None:
-            if isinstance(history, basestring):
-                self.wrtptr.append_history(<const char*?>history)
+            if isinstance(history, six.string_types):
+                _history=_chars(history)
+                self.wrtptr.append_history(<const char*?>_history)
             else: # assume it's a list
                 for i in history:
-                    self.wrtptr.append_history(<const char*?>i)
+                    _i=_chars(i)
+                    self.wrtptr.append_history(<const char*?>_i)
 
         self.__setup_write(dtype=dtype)
         self.__save_standard_volume(dtype=dtype)
@@ -215,7 +233,8 @@ cdef class EZMincWrapper(object):
     
     def append_history(self, comment):
         ''' Append history to the mincfile'''
-        self.wrtptr.append_history(<char*?>comment)
+        _comment=_chars(comment)
+        self.wrtptr.append_history(<char*?>_comment)
     
     def is_signed(self):
         return (<minc_1_base*>self.rdrptr).is_signed()
@@ -306,8 +325,9 @@ cdef class input_iterator_real(object):
 
     def __cinit__(self,file=None):
         if file is not None:
+            _file=_chars(file)
             self.rdrptr = new minc_1_reader()
-            self.rdrptr.open(<char*?>file)
+            self.rdrptr.open(<char*?>_file)
             self.rdrptr.setup_read_double()
             self._it = new minc_input_iterator[double](self.rdrptr[0])
             self._it.begin()
@@ -316,12 +336,13 @@ cdef class input_iterator_real(object):
             self.rdrptr = NULL
     
     def open(self,file):
+        _file=_chars(file)
         if self._it != NULL:
             del self._it
         if self.rdrptr != NULL:
             del self.rdrptr
         self.rdrptr = new minc_1_reader()
-        self.rdrptr.open(<char*?>file)
+        self.rdrptr.open(<char*?>_file)
         self.rdrptr.setup_read_double()
         self._it = new minc_input_iterator[double](self.rdrptr[0])
         self._it.begin()
@@ -359,8 +380,9 @@ cdef class input_iterator_int(object):
 
     def __cinit__(self,file=None):
         if file is not None:
+            _file=_chars(file)
             self.rdrptr = new minc_1_reader()
-            self.rdrptr.open(<char*?>file)
+            self.rdrptr.open(<char*?>_file)
             self.rdrptr.setup_read_int()
             self._it = new minc_input_iterator[int](self.rdrptr[0])
             self._it.begin()
@@ -369,12 +391,13 @@ cdef class input_iterator_int(object):
             self.rdrptr = NULL
     
     def open(self,file):
+        _file=_chars(file)
         if self._it != NULL:
             del self._it
         if self.rdrptr != NULL:
             del self.rdrptr
         self.rdrptr = new minc_1_reader()
-        self.rdrptr.open(<char*?>file)
+        self.rdrptr.open(<char*?>_file)
         self.rdrptr.setup_read_int()
         self._it = new minc_input_iterator[int](self.rdrptr[0])
         self._it.begin()
@@ -418,12 +441,13 @@ cdef class output_iterator_real(object):
         if self.wrtptr != NULL:
             del self.wrtptr
         self.wrtptr = new minc_1_writer()
-
+        _file=_chars(file)
         if reference is not None:
-            self.wrtptr.open(<char*?>file, reference.rdrptr[0])
+            self.wrtptr.open(<char*?>_file, reference.rdrptr[0])
         else:
-            self.wrtptr.open(<char*?>file, <char*?>reference_file)
-            
+            _reference_file=_chars(reference_file)
+            self.wrtptr.open(<char*?>_file, <char*?>_reference_file)
+
         self.wrtptr.setup_write_float()
         self._it = new minc_output_iterator[float](self.wrtptr[0])
         self._it.begin()
@@ -472,11 +496,12 @@ cdef class output_iterator_int(object):
             del self.wrtptr
         
         self.wrtptr = new minc_1_writer()
-        
+        _file=_chars(file)
         if reference is not None:
-            self.wrtptr.open(<char*?>file,reference.rdrptr[0])
+            self.wrtptr.open(<char*?>_file,reference.rdrptr[0])
         else:
-            self.wrtptr.open(<char*?>file,<char*?>reference_file)
+            _reference_file=_chars(reference_file)
+            self.wrtptr.open(<char*?>_file,<char*?>_reference_file)
             
         self.wrtptr.setup_write_int()
         self._it = new minc_output_iterator[int](self.wrtptr[0])
@@ -637,7 +662,8 @@ cdef object read_one_transform(VIO_General_transform * _xfm):
 
 def read_xfm(input_xfm):
     cdef VIO_General_transform _xfm
-    if input_transform_file(<char*?>input_xfm, &_xfm) != VIO_OK:
+    _input_xfm=_chars(input_xfm)
+    if input_transform_file(<char*?>_input_xfm, &_xfm) != VIO_OK:
         raise Exception('Unable to open {}'.format(input_xfm))
     x=read_one_transform(&_xfm)
     delete_general_transform(&_xfm)
@@ -672,7 +698,9 @@ def write_xfm(output_xfm, trans, comment=None):
             _xfm=x
     if comment is None:
         comment="PyEZMINC {}".format(repr(trans))
-    wrt = output_transform_file(<char*>output_xfm,<char*>(comment),<VIO_General_transform*>&_xfm)
+    _comment=_chars(comment)
+    _output_xfm=_chars(output_xfm)
+    wrt = output_transform_file(<char*>_output_xfm,<char*>_comment,<VIO_General_transform*>&_xfm)
     delete_general_transform(&_xfm)
 
     if wrt!=VIO_OK:

@@ -31,7 +31,7 @@ import string
 import shutil
 import sys
 
-import pyezminc
+from . import pyezminc
 
 
 FIRST_LABEL_ID = 1
